@@ -15,9 +15,33 @@ _HEADERS = {
         "img-src 'self' data: blob:; media-src 'self' blob:; frame-ancestors 'none'"
     ),
     "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(self)",
     "Cache-Control": "no-store",
 }
+
+_ABOUT_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
+        "img-src 'self' data: blob: https:; "
+        "frame-ancestors 'none'"
+    ),
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Cache-Control": "no-store",
+}
+
+
+@router.get("/about")
+def about_page(request: Request):
+    return _templates.TemplateResponse(
+        request, "about.html", {"api": get_settings().api_prefix}, headers=_ABOUT_HEADERS
+    )
 
 
 @router.get("/")
@@ -48,3 +72,4 @@ def kiosk_page(request: Request):
     return _templates.TemplateResponse(
         request, "kiosk.html", {"api": get_settings().api_prefix}, headers=_HEADERS
     )
+
