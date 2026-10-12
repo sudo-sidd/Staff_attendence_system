@@ -1383,27 +1383,123 @@ function openFacultyHistory(user) {
 // ---- Users Tab ----
 // ============================================================================
 
-const U = { q: "", role: "", is_active: "", offset: 0 };
+const U = { q: "", role: "", is_active: "", face_enrolled: "", dept: "", sort_dept: false, offset: 0 };
 async function users() {
-  const limit = 20;
-  const [list] = await Promise.all([api("/users?" + qs({ ...U, limit })), departments.length ? null : loadDepartments()]);
+  const fetchLimit = 500; // matches new server max
+  const [firstPage] = await Promise.all([
+    api("/users?" + qs({ q: U.q, role: U.role, is_active: U.is_active, limit: fetchLimit, offset: 0 })),
+    departments.length ? null : loadDepartments()
+  ]);
+
+  // If more pages exist, fetch them all (for large orgs)
+  let allUsers = firstPage.items || [];
+  if (firstPage.total > fetchLimit) {
+    const extra = [];
+    for (let off = fetchLimit; off < firstPage.total; off += fetchLimit) {
+      extra.push(api("/users?" + qs({ q: U.q, role: U.role, is_active: U.is_active, limit: fetchLimit, offset: off })));
+    }
+    const pages = await Promise.all(extra);
+    pages.forEach(p => { allUsers = allUsers.concat(p.items || []); });
+  }
+
+  // Client-side filter: face_enrolled and department
+  let items = allUsers;
+  if (U.face_enrolled !== "") {
+    const want = U.face_enrolled === "true";
+    items = items.filter(u => !!u.face_enrolled === want);
+  }
+  if (U.dept !== "") {
+    items = items.filter(u => u.department && String(u.department.id) === U.dept);
+  }
+  // Sort by department name then name
+  if (U.sort_dept) {
+    items = [...items].sort((a, b) => {
+      const da = a.department?.name || "zzz", db2 = b.department?.name || "zzz";
+      return da.localeCompare(db2) || a.full_name.localeCompare(b.full_name);
+    });
+  }
+
+  // Stat counts
+  const total     = items.length;
+  const faceYes   = items.filter(u => u.face_enrolled).length;
+  const faceNo    = items.filter(u => !u.face_enrolled).length;
+  const active    = items.filter(u => u.is_active).length;
+  const inactive  = items.filter(u => !u.is_active).length;
+
+  // Pagination slice
+  const pageLimit = 25;
+  const pageItems = items.slice(U.offset, U.offset + pageLimit);
+
   const sel = (name, opts, val) => h("select", { name }, opts.map(([v, t]) => h("option", { value: v, selected: v === val }, t)));
+
   const filters = h("form", { class: "toolbar", onsubmit: (e) => {
     e.preventDefault(); const f = new FormData(e.target);
-    Object.assign(U, { q: f.get("q").trim(), role: f.get("role"), is_active: f.get("is_active"), offset: 0 }); render();
-  } },
-    h("div", { class: "field-group grow" }, h("label", {}, "Search"), h("input", { name: "q", value: U.q, placeholder: "Name, email, or username" })),
-    h("div", { class: "field-group" }, h("label", {}, "Role"), sel("role", [["", "All roles"], ["admin", "Admin"], ["system", "System"], ["staff", "Staff"]], U.role)),
-    h("div", { class: "field-group" }, h("label", {}, "Status"), sel("is_active", [["", "All"], ["true", "Active"], ["false", "Inactive"]], U.is_active)),
+    Object.assign(U, {
+      q: f.get("q").trim(),
+      role: f.get("role"),
+      is_active: f.get("is_active"),
+      face_enrolled: f.get("face_enrolled"),
+      dept: f.get("dept"),
+      sort_dept: f.get("sort_dept") === "on",
+      offset: 0
+    });
+    render();
+  }},
+    h("div", { class: "field-group grow" }, h("label", {}, "Search"), h("input", { name: "q", value: U.q, placeholder: "Name, email, ID…" })),
+    h("div", { class: "field-group" }, h("label", {}, "Role"),    sel("role",    [["", "All roles"],  ["admin", "Admin"], ["system", "System"], ["staff", "Staff"]], U.role)),
+    h("div", { class: "field-group" }, h("label", {}, "Status"),  sel("is_active", [["", "All"], ["true", "Active"], ["false", "Inactive"]], U.is_active)),
+    h("div", { class: "field-group" }, h("label", {}, "Face Enrolled"), sel("face_enrolled", [["", "All"], ["true", "Yes ✓"], ["false", "No ✗"]], U.face_enrolled)),
+    h("div", { class: "field-group" }, h("label", {}, "Department"),
+      h("select", { name: "dept" },
+        [h("option", { value: "" }, "All Departments"),
+         ...departments.map(d => h("option", { value: String(d.id), selected: String(d.id) === U.dept }, d.name))]
+      )
+    ),
+    h("div", { class: "field-group", style: "align-self:flex-end;padding-bottom:4px" },
+      h("label", { style: "display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap" },
+        h("input", { type: "checkbox", name: "sort_dept", checked: U.sort_dept, style: "width:auto" }),
+        "Sort by Dept"
+      )
+    ),
     h("button", { type: "submit" }, "Search"),
-    h("button", { type: "button", onclick: addUser }, "Add user"));
-  const rows = list.items.map((u) => {
+    h("button", { type: "button", onclick: addUser }, "Add user"),
+    // Export CSV
+    h("button", { type: "button", class: "secondary",
+      onclick: () => {
+        const csvRows = [
+          ["ID", "Name", "Email", "Department", "Role", "Status", "Face Enrolled", "Employee ID", "Last Login"],
+          ...items.map(u => [
+            u.id, u.full_name, u.email,
+            u.department?.name || "-",
+            u.role,
+            u.is_active ? "Active" : "Inactive",
+            u.face_enrolled ? "Yes" : "No",
+            u.employee_id || "-",
+            fmt(u.last_login_at)
+          ])
+        ];
+        downloadCSV(`Users_Export_${new Date().toLocaleDateString("en-CA")}.csv`, csvRows);
+      }
+    },
+      h("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", style: "vertical-align:text-bottom;margin-right:4px" },
+        h("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+        h("polyline", { points: "7 10 12 15 17 10" }),
+        h("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+      ),
+      "Export CSV"
+    )
+  );
+
+  const rows = pageItems.map((u) => {
     const self = u.id === me.id;
     return [
-      String(u.id), u.full_name, u.email,
-      u.department ? u.department.name : "-", u.role,
+      String(u.id),
+      u.full_name,
+      u.email,
+      u.department ? u.department.name : h("span", { class: "muted" }, "—"),
+      u.role,
       chip(u.is_active ? "Active" : "Inactive", u.is_active ? "green" : "gray"),
-      chip(u.face_enrolled ? "Yes" : "No", u.face_enrolled ? "green" : "gray"),
+      chip(u.face_enrolled ? "Yes" : "No", u.face_enrolled ? "green" : "red"),
       h("span", { class: "muted" }, fmt(u.last_login_at)),
       h("span", { class: "nowrap" },
         h("button", { type: "button", class: "link", disabled: self, onclick: () => setActive(u) }, u.is_active ? "Deactivate" : "Activate"),
@@ -1411,11 +1507,53 @@ async function users() {
         h("button", { type: "button", class: "link danger", disabled: self, onclick: () => removeUser(u) }, "Delete"))
     ];
   });
+
+  // Simple pager for client-side sliced data
+  const from = total ? U.offset + 1 : 0;
+  const to   = Math.min(U.offset + pageLimit, total);
+  const clientPager = h("div", { class: "pager" },
+    h("button", { type: "button", class: "secondary", disabled: U.offset === 0,
+      onclick: () => { U.offset -= pageLimit; render(); } }, "Previous"),
+    h("button", { type: "button", class: "secondary", disabled: to >= total,
+      onclick: () => { U.offset += pageLimit; render(); } }, "Next"),
+    h("div", { class: "spacer" }),
+    h("span", {}, `${from}–${to} of ${total}`)
+  );
+
   return [
-    h("div", { class: "page-header" }, h("h2", {}, "Users")),
+    h("div", { class: "page-header" },
+      h("div", {},
+        h("h2", {}, "Users"),
+        h("p", { class: "page-header-desc" }, `${total} user${total !== 1 ? "s" : ""} matching current filters`)
+      )
+    ),
+    // ── Stat cards ──
+    h("div", { class: "stats" }, [
+      ["Total",         total,    null],
+      ["Face Enrolled", faceYes,  "var(--success)"],
+      ["Not Enrolled",  faceNo,   "var(--danger)"],
+      ["Active",        active,   "var(--blue,#3b82f6)"],
+      ["Inactive",      inactive, null],
+    ].map(([lbl, v, color]) =>
+      h("div", { class: "stat-card", style: "cursor:default",
+        onclick: () => {
+          // Quick-filter on card click
+          if (lbl === "Face Enrolled") { U.face_enrolled = "true";  U.offset = 0; render(); }
+          if (lbl === "Not Enrolled")  { U.face_enrolled = "false"; U.offset = 0; render(); }
+          if (lbl === "Active")        { U.is_active = "true";      U.offset = 0; render(); }
+          if (lbl === "Inactive")      { U.is_active = "false";     U.offset = 0; render(); }
+          if (lbl === "Total")         { U.face_enrolled = ""; U.is_active = ""; U.dept = ""; U.offset = 0; render(); }
+        }
+      },
+        h("div", { class: "num", style: color ? `color:${color}` : "" }, String(v)),
+        h("div", { class: "lbl" }, lbl)
+      )
+    )),
     filters,
-    table(["ID", "Name", "Email", "Dept", "Role", "Status", "Face", "Last login", ""], rows),
-    pager(U, list.total, limit, render)
+    rows.length
+      ? table(["ID", "Name", "Email", "Dept", "Role", "Status", "Face", "Last Login", ""], rows)
+      : h("div", { class: "empty" }, "No users match the current filters."),
+    clientPager
   ];
 }
 async function setActive(u) {
