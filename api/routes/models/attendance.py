@@ -61,6 +61,7 @@ class AttendanceDayAdmin(AttendanceDay):
     employee_id: str | None = None
     check_in_count: int
     check_out_count: int
+    total_time_formatted: str = "-"
 
 
 class AttendanceDayList(BaseModel):

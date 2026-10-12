@@ -84,6 +84,16 @@ def my_attendance(user: CurrentUser, db: DB, rng: Range) -> AttendanceDayList:
     return AttendanceDayList(items=[AttendanceDay.model_validate(r, from_attributes=True) for r in rows])
 
 
+def _format_day_duration(first_in: datetime | None, last_out: datetime | None, work_date: date) -> str:
+    if first_in and last_out:
+        diff = max(0, int((last_out - first_in).total_seconds()))
+        return f"{diff // 3600}h {(diff % 3600) // 60}m"
+    if first_in and work_date == svc.today():
+        diff = max(0, int((utcnow() - first_in).total_seconds()))
+        return f"{diff // 3600}h {(diff % 3600) // 60}m"
+    return "-"
+
+
 @router.get(
     "/records", response_model=AttendanceDayAdminList, dependencies=[Depends(require(Permission.attendance_read_any))]
 )
@@ -106,6 +116,7 @@ def all_records(
             full_name=users[r.user_id].full_name,
             email=users[r.user_id].email,
             employee_id=users[r.user_id].employee_id,
+            total_time_formatted=_format_day_duration(r.first_check_in, r.last_check_out, r.work_date),
         )
         for r in rows
     ]

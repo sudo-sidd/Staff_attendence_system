@@ -402,12 +402,6 @@
     </div>
   </div>
 
-  <!-- Greeting screen (fullscreen, check in / check out) -->
-  <div id="greeting" class="screen hidden">
-    <h1 id="gHead"></h1>
-    <p id="gSub"></p>
-  </div>
-
   <!-- Camera error screen -->
   <div id="camError" class="screen hidden" style="border-top-color:var(--danger)">
     <h1>Camera unavailable</h1>
@@ -420,10 +414,8 @@
     const $ = (id) => document.getElementById(id);
     const token = sessionStorage.getItem("token");
     const HOLD_MS = 3000;       // how long a face must stay in view before we identify it
-    const POPUP_MS = 3500;
-    const GREETING_MS = 6000;
+    const POPUP_MS = 2500;      // display check-in / check-out confirmation card before directly returning to camera
     const CONFIRM_MS = 20000;   // the confirm window closes itself (nothing recorded) after this long
-    const CLEAR_MS = 1500;      // after any outcome, the screen must be empty this long before the next person
 
     function signOut() { sessionStorage.removeItem("token"); location.replace("/"); }
     $("logout").addEventListener("click", signOut);
@@ -455,28 +447,6 @@
     function tickClock() { $("clock").textContent = new Date().toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
     tickClock(); setInterval(tickClock, 15000);
 
-    // ---- Greetings: [headline, sub-line]; {n} is the first name ----
-    const GREET = {
-      in: {
-        morning:   [["Good morning, {n}!", "Have a productive day!"], ["Good morning, {n}!", "Wishing you a bright and focused day ahead."], ["Welcome in, {n}!", "Make today a great one."]],
-        afternoon: [["Good afternoon, {n}!", "Hope the rest of your day goes smoothly."], ["Welcome, {n}!", "Let's make the afternoon count."]],
-        evening:   [["Good evening, {n}!", "Thanks for being here. Have a smooth shift."]],
-      },
-      out: {
-        day:     [["Thank you, {n}!", "Take care, and see you soon."], ["Thanks for your hard work, {n}!", "Have a good rest of the day."]],
-        evening: [["Thank you, {n}!", "Get some fresh air, spend time with family & friends."], ["Great work today, {n}!", "Switch off, relax and enjoy your evening."], ["Well done, {n}!", "Step outside, take a walk, call someone you love."]],
-        night:   [["Thank you, {n}!", "Get home safe and rest well."]],
-      },
-    };
-    const pick = (a) => a[Math.floor(Math.random() * a.length)];
-    function greeting(r) {
-      const h = r.hour, first = r.name.split(" ")[0];
-      const [head, sub] = r.action === "check_in"
-        ? pick(GREET.in[h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"])
-        : pick(GREET.out[h < 17 ? "day" : h < 21 ? "evening" : "night"]);
-      return [head.replace("{n}", first), sub];
-    }
-
     // ---- Screens ----
     async function card({ tick, error, title, name, dept, emp, action, actionText }) {
       $("popup").classList.toggle("err", !!error);
@@ -498,13 +468,6 @@
 
     async function showRecorded(r) {
       await card({ tick: true, title: "Captured", name: r.name, dept: r.department || "No department", emp: r.employee_id, action: r.action, actionText: verb(r) });
-      const [head, sub] = greeting(r);
-      $("gHead").textContent = head;
-      $("gSub").textContent = sub;
-      $("greeting").classList.toggle("out", r.action === "check_out");
-      $("greeting").classList.remove("hidden");
-      await sleep(GREETING_MS);
-      $("greeting").classList.add("hidden");
     }
 
     // Every non-recorded outcome is an error card; `r` is the API result.
@@ -517,8 +480,8 @@
       unavailable:       ()  => ({ title: "Service unavailable", name: "Please try again in a moment" }),
     };
 
-    // ---- Flow: face held 3 s -> identify -> confirm window (Check in / Check out / X) -> record -> popup + greeting ----
-    let busy = false, since = null, misses = 0, noFace = 0, needClear = false, clearSince = null;
+    // ---- Flow: face held 3 s -> identify -> confirm window (Check in / Check out / X) -> record -> card -> direct return ----
+    let busy = false, since = null, misses = 0, noFace = 0;
 
     // Resolves with "check_in" / "check_out", or null if the person closes the window (X) or it times out.
     function confirmPerson(p) {
@@ -549,7 +512,7 @@
       try {
         const r = await post("/kiosk/identify", { image: frame(640, 0.85) });
         if (r.status === "no_face" && ++noFace < 3) { setPrompt("Couldn't see you clearly. Face the camera"); return; }
-        noFace = 0; needClear = true;
+        noFace = 0;
         if (r.status !== "matched") { await card({ error: true, ...ERRORS[r.status](r) }); return; }
 
         const choice = await confirmPerson(r);
@@ -560,9 +523,15 @@
         else await card({ error: true, ...ERRORS[rec.status](rec) });
       } catch (e) {
         if (e.message === "auth") return;
-        noFace = 0; needClear = true;
+        noFace = 0;
         await card({ error: true, ...ERRORS.unavailable() });
-      } finally { busy = false; }
+      } finally {
+        busy = false;
+        since = null;
+        misses = 0;
+        document.body.classList.remove("counting");
+        setPrompt("Look at the camera");
+      }
     }
 
     async function tick() {
@@ -571,11 +540,7 @@
         if (img) {
           const { faces } = await post("/kiosk/detect", { image: img });
           const now = Date.now();
-          if (needClear) {
-            if (faces === 0) { clearSince ??= now; if (now - clearSince >= CLEAR_MS) { needClear = false; clearSince = null; } }
-            else clearSince = null;
-            setPrompt(faces ? "Please step away, then look at the camera again" : "Look at the camera");
-          } else if (faces === 1) {
+          if (faces === 1) {
             misses = 0; since ??= now;
             const left = Math.ceil((HOLD_MS - (now - since)) / 1000);
             if (left > 0) { document.body.classList.add("counting"); setPrompt("Hold still... " + left); }
