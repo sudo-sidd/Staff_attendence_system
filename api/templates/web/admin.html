@@ -844,6 +844,7 @@ const deptOptions = (blank) => [["", blank], ...departments.map((d) => [d.id, d.
 // ============================================================================
 // ---- Overview Tab ----
 // ============================================================================
+
 async function overview() {
   const [s, rep] = await Promise.all([
     api("/admin/summary"),
@@ -853,40 +854,58 @@ async function overview() {
 
   // Aggregate staff attendance per department for today
   const deptCounts = {};
-  departments.forEach((d) => {
-    deptCounts[d.name] = { present: 0, absent: 0 };
-  });
-
+  departments.forEach((d) => { deptCounts[d.name] = { present: 0, absent: 0 }; });
   let unassignedPresent = 0, unassignedAbsent = 0;
 
-  (rep.items || []).forEach((u) => {
+  const allItems = rep.items || [];
+
+  allItems.forEach((u) => {
     const isPresent = u.status === "checked_in" || u.status === "checked_out";
     if (u.department && deptCounts[u.department]) {
       if (isPresent) deptCounts[u.department].present++;
       else deptCounts[u.department].absent++;
     } else if (u.department) {
-      deptCounts[u.department] = {
-        present: isPresent ? 1 : 0,
-        absent: isPresent ? 0 : 1
-      };
+      deptCounts[u.department] = { present: isPresent ? 1 : 0, absent: isPresent ? 0 : 1 };
     } else {
-      if (isPresent) unassignedPresent++;
-      else unassignedAbsent++;
+      if (isPresent) unassignedPresent++; else unassignedAbsent++;
     }
   });
 
+  // Build dept table — clicking a name navigates to the dept detail page
   const deptRows = departments.map((d) => {
     const counts = deptCounts[d.name] || { present: 0, absent: 0 };
     return [
-      d.name,
+      h("button", { type: "button", class: "link",
+        onclick: () => { location.hash = "#dept-" + encodeURIComponent(d.name); } }, d.name),
       String(counts.present),
       String(counts.absent)
     ];
   });
-
   if (unassignedPresent > 0 || unassignedAbsent > 0) {
-    deptRows.push(["Unassigned / General", String(unassignedPresent), String(unassignedAbsent)]);
+    deptRows.push([
+      h("button", { type: "button", class: "link",
+        onclick: () => { location.hash = "#dept-" + encodeURIComponent("Unassigned / General"); } }, "Unassigned / General"),
+      String(unassignedPresent),
+      String(unassignedAbsent)
+    ]);
   }
+
+  // Recent attendance log — last 8 present staff sorted by most recent check-in
+  const recentRows = [...allItems]
+    .filter(u => u.first_check_in)
+    .sort((a, b) => new Date(b.first_check_in) - new Date(a.first_check_in))
+    .slice(0, 8)
+    .map(u => [
+      u.full_name || "—",
+      u.department || h("span", { class: "muted" }, "—"),
+      h("span", { style: "color:var(--success)" }, fmtTime(u.first_check_in)),
+      u.last_check_out ? h("span", { style: "color:var(--warning,#f59e0b)" }, fmtTime(u.last_check_out)) : h("span", { class: "muted" }, "Still in"),
+      u.total_time_formatted || "—",
+      chip(
+        u.status === "checked_in" ? "Currently In" : u.status === "checked_out" ? "Checked Out" : "Absent",
+        u.status === "checked_in" ? "blue" : u.status === "checked_out" ? "green" : "gray"
+      )
+    ]);
 
   return [
     h("div", { class: "page-header" },
@@ -902,7 +921,101 @@ async function overview() {
       ["Absent Today", rep.absent_count || 0],
       ["Departments", departments.length || s.departments],
     ].map(([lbl, v]) => h("div", { class: "stat-card" }, h("div", { class: "num" }, String(v)), h("div", { class: "lbl" }, lbl)))),
-    table(["Department Name", "No.Present", "No.Absent"], deptRows)
+    h("h3", { style: "margin:24px 0 10px;font-size:1rem" }, "🏢 Department Attendance"),
+    table(["Department Name", "No.Present", "No.Absent"], deptRows),
+    h("h3", { style: "margin:28px 0 10px;font-size:1rem" }, "🕐 Recent Attendance Log"),
+    recentRows.length
+      ? table(["Name", "Department", "Check In", "Check Out", "Total Time", "Status"], recentRows)
+      : h("p", { class: "muted" }, "No attendance events today yet.")
+  ];
+}
+
+// ============================================================================
+// ---- Department Detail Page (navigated via #dept-<name>) ----
+// ============================================================================
+async function deptDetail(deptName) {
+  const rep = await api("/attendance/daily-report");
+  const allItems = rep.items || [];
+  const deptItems = allItems.filter(u => (u.department || "Unassigned / General") === deptName);
+  const present     = deptItems.filter(u => u.status !== "absent");
+  const absent      = deptItems.filter(u => u.status === "absent");
+  const currentlyIn = present.filter(u => u.status === "checked_in").length;
+  const checkedOut  = present.filter(u => u.status === "checked_out").length;
+
+  // Attendance log rows sorted most-recent first
+  const logRows = [...present]
+    .sort((a, b) => new Date(b.first_check_in || 0) - new Date(a.first_check_in || 0))
+    .map(u => [
+      u.full_name || "—",
+      u.employee_id || h("span", { class: "muted" }, "—"),
+      u.first_check_in ? h("span", { style: "color:var(--success)" }, fmtTime(u.first_check_in)) : h("span", { class: "muted" }, "—"),
+      u.last_check_out ? h("span", { style: "color:var(--warning,#f59e0b)" }, fmtTime(u.last_check_out)) : h("span", { class: "muted" }, "Still in"),
+      u.total_time_formatted || "—",
+      chip(
+        u.status === "checked_in" ? "Currently In" : "Checked Out",
+        u.status === "checked_in" ? "blue" : "green"
+      )
+    ]);
+
+  const presentRows = present.map(u => [
+    u.full_name || "—",
+    u.email || "—",
+    u.employee_id || h("span", { class: "muted" }, "—"),
+    chip(u.status === "checked_in" ? "Currently In" : "Checked Out",
+         u.status === "checked_in" ? "blue" : "green"),
+    h("button", { type: "button", class: "secondary small",
+      onclick: () => openFacultyHistory(u) }, "View History →")
+  ]);
+
+  const absentRows = absent.map(u => [
+    u.full_name || "—",
+    u.email || "—",
+    u.employee_id || h("span", { class: "muted" }, "—"),
+    chip("Absent", "gray"),
+    h("button", { type: "button", class: "secondary small",
+      onclick: () => openFacultyHistory(u) }, "View History →")
+  ]);
+
+  return [
+    // ── Page header: back + title only ──
+    h("div", { class: "page-header" },
+      h("div", { style: "display:flex;align-items:center;gap:12px" },
+        h("button", { type: "button", class: "secondary", style: "padding:6px 12px;font-size:13px",
+          onclick: () => { location.hash = "#overview"; } }, "← Back"),
+        h("div", {},
+          h("h2", {}, deptName),
+          h("p", { class: "page-header-desc" },
+            `Attendance detail for ${rep.work_date || "today"} · ${present.length} present · ${absent.length} absent`)
+        )
+      )
+    ),
+    // ── Stat cards — full-width grid outside page-header ──
+    h("div", { class: "stats" }, [
+      ["Present",      present.length, "var(--success)"],
+      ["Currently In", currentlyIn,    "var(--blue,#3b82f6)"],
+      ["Checked Out",  checkedOut,     null],
+      ["Absent",       absent.length,  "var(--danger)"],
+    ].map(([lbl, v, color]) =>
+      h("div", { class: "stat-card" },
+        h("div", { class: "num", style: color ? `color:${color}` : "" }, String(v)),
+        h("div", { class: "lbl" }, lbl)
+      )
+    )),
+    // ── Attendance log ──
+    h("h3", { style: "margin:20px 0 10px;font-size:1rem" }, "🕐 Attendance Log (Present Staff)"),
+    logRows.length
+      ? table(["Name", "Employee ID", "Check In", "Check Out", "Total Time", "Status"], logRows)
+      : h("p", { class: "muted" }, "No one has checked in yet."),
+    // ── Present list ──
+    h("h3", { style: "margin:28px 0 10px;font-size:1rem;color:var(--success)" }, `✓ Present (${present.length})`),
+    presentRows.length
+      ? table(["Name", "Email", "Employee ID", "Status", "Action"], presentRows)
+      : h("p", { class: "muted" }, "None"),
+    // ── Absent list ──
+    h("h3", { style: "margin:28px 0 10px;font-size:1rem;color:var(--danger)" }, `✗ Absent (${absent.length})`),
+    absentRows.length
+      ? table(["Name", "Email", "Employee ID", "Status", "Action"], absentRows)
+      : h("p", { class: "muted" }, "None")
   ];
 }
 
@@ -1037,7 +1150,7 @@ async function reports() {
     return h("tr", {
       class: "staff-row",
       title: "Click to view full attendance history for " + u.full_name,
-      onclick: () => openFacultyHistory(u)
+      onclick: () => navToStaffHistory(u, "#reports")
     },
       h("td", { class: "muted nowrap", style: "font-weight:600" }, String(u.user_id)),
       h("td", {},
@@ -1060,9 +1173,9 @@ async function reports() {
           class: "secondary small",
           onclick: (e) => {
             e.stopPropagation();
-            openFacultyHistory(u);
+            navToStaffHistory(u, "#reports");
           }
-        }, "View History &rarr;")
+        }, "View History →")
       )
     );
   });
@@ -1093,127 +1206,87 @@ async function reports() {
 }
 
 // ============================================================================
-// ---- Faculty Entire Attendance History Drill-Down ----
+// ---- Staff History Page (navigated via #staff-<userId>) ----
 // ============================================================================
-async function openFacultyHistory(user) {
-  const dlg = $("dlgHistory");
-  dlg.replaceChildren(h("div", { class: "empty" }, "Loading attendance history for " + user.full_name + "..."));
-  dlg.showModal();
+// Cache user objects so the router can retrieve them by id
+const staffCache = {};
+function navToStaffHistory(user, backHash) {
+  staffCache[user.user_id] = { ...user, _backHash: backHash || "#reports" };
+  location.hash = "#staff-" + user.user_id;
+}
 
-  let daysRange = 30; // default to last 30 days
+async function staffHistoryPage(userId) {
+  const cached = staffCache[userId] || {};
+  const backHash = cached._backHash || "#reports";
+
+  // We may not have a cached user — fetch a minimal stub from the API
+  let user = cached;
+  if (!user.full_name) {
+    try {
+      const u = await api("/users/" + userId);
+      user = { user_id: u.id, full_name: u.full_name, email: u.email, department: u.department?.name };
+    } catch {
+      user = { user_id: userId, full_name: "Staff #" + userId, email: "" };
+    }
+  }
+
+  const container = h("div", { id: "staff-hist-wrap" },
+    h("p", { class: "muted", style: "padding:40px;text-align:center" }, "Loading history…")
+  );
+
+  let daysRange = 30;
   let customFrom = "", customTo = "";
+  const initial = (user.full_name || "S").charAt(0).toUpperCase();
 
-  async function loadHistoryView() {
+  async function loadView() {
     let dateFrom, dateTo;
     if (customFrom && customTo) {
-      dateFrom = customFrom;
-      dateTo = customTo;
+      dateFrom = customFrom; dateTo = customTo;
     } else {
       dateTo = new Date().toLocaleDateString("en-CA");
       dateFrom = ago(daysRange);
     }
-
     try {
       const [recordsData, eventsData] = await Promise.all([
         api("/attendance/records?" + qs({ user_id: user.user_id, date_from: dateFrom, date_to: dateTo, limit: 150 })),
-        api("/attendance/events?" + qs({ user_id: user.user_id, date_from: dateFrom, date_to: dateTo, limit: 150 }))
+        api("/attendance/events?"  + qs({ user_id: user.user_id, date_from: dateFrom, date_to: dateTo, limit: 150 }))
       ]);
+      const items  = recordsData.items || [];
+      const events = eventsData.items  || [];
 
-      const items = recordsData.items || [];
-      const events = eventsData.items || [];
-
-      // Calculate cumulative metrics
-      let totalWorkedSec = 0;
-      let fullDaysCount = 0;
-
+      let totalWorkedSec = 0, fullDaysCount = 0;
       items.forEach((r) => {
         if (r.first_check_in && r.last_check_out) {
           const diff = (new Date(r.last_check_out) - new Date(r.first_check_in)) / 1000;
-          if (diff > 0) {
-            totalWorkedSec += diff;
-            fullDaysCount++;
-          }
+          if (diff > 0) { totalWorkedSec += diff; fullDaysCount++; }
         }
       });
-
       const totalHours = Math.floor(totalWorkedSec / 3600);
-      const totalMins = Math.floor((totalWorkedSec % 3600) / 60);
-      const avgMins = fullDaysCount ? Math.round((totalWorkedSec / fullDaysCount) / 60) : 0;
-      const avgHoursFormatted = `${Math.floor(avgMins / 60)}h ${avgMins % 60}m`;
+      const totalMins  = Math.floor((totalWorkedSec % 3600) / 60);
+      const avgMins    = fullDaysCount ? Math.round((totalWorkedSec / fullDaysCount) / 60) : 0;
+      const avgFmt     = `${Math.floor(avgMins / 60)}h ${avgMins % 60}m`;
 
-      // Header component
-      const initial = (user.full_name || "S").charAt(0).toUpperCase();
-      const header = h("div", { class: "history-header" },
-        h("div", { class: "history-user-info" },
-          h("div", { class: "history-avatar" }, initial),
-          h("div", { class: "history-meta" },
-            h("h2", {}, user.full_name),
-            h("p", {},
-              user.email,
-              user.department ? " • Dept: " + user.department : "",
-              " • Staff ID #" + user.user_id
-            )
-          )
-        ),
-        h("button", {
-          type: "button",
-          class: "close-icon-btn",
-          title: "Close",
-          onclick: () => dlg.close()
-        }, "✕")
-      );
-
-      // Stat summary cards
-      const stats = h("div", { class: "history-stats" },
-        h("div", { class: "history-stat" }, h("div", { class: "num" }, String(items.length)), h("div", { class: "lbl" }, "Days Recorded")),
-        h("div", { class: "history-stat" }, h("div", { class: "num" }, `${totalHours}h ${totalMins}m`), h("div", { class: "lbl" }, "Total Time Worked")),
-        h("div", { class: "history-stat" }, h("div", { class: "num" }, avgHoursFormatted), h("div", { class: "lbl" }, "Avg Daily Time")),
-        h("div", { class: "history-stat" }, h("div", { class: "num" }, String(events.length)), h("div", { class: "lbl" }, "Total Scans"))
-      );
-
-      // Date Range Presets
+      // Range preset buttons
       const presetButtons = [
-        ["Last 7 Days", 7],
-        ["Last 30 Days", 30],
-        ["Last 90 Days", 90],
-        ["Past Year (365 Days)", 365]
+        ["Last 7 Days", 7], ["Last 30 Days", 30], ["Last 90 Days", 90], ["Past Year", 365]
       ].map(([label, d]) => h("button", {
         type: "button",
         class: "range-btn " + (daysRange === d && !customFrom ? "active" : ""),
-        onclick: () => {
-          daysRange = d;
-          customFrom = "";
-          customTo = "";
-          loadHistoryView();
-        }
+        onclick: () => { daysRange = d; customFrom = ""; customTo = ""; loadView(); }
       }, label));
 
       const rangeBar = h("div", { class: "range-bar" },
         ...presetButtons,
         h("div", { style: "display:flex;align-items:center;gap:6px;margin-left:auto" },
-          h("input", {
-            type: "date",
-            value: dateFrom,
-            style: "padding:3px 6px;font-size:12px",
-            onchange: (e) => { customFrom = e.target.value; }
-          }),
+          h("input", { type: "date", value: dateFrom, style: "padding:3px 6px;font-size:12px",
+            onchange: (e) => { customFrom = e.target.value; } }),
           h("span", { class: "muted", style: "font-size:12px" }, "to"),
-          h("input", {
-            type: "date",
-            value: dateTo,
-            style: "padding:3px 6px;font-size:12px",
-            onchange: (e) => { customTo = e.target.value; }
-          }),
-          h("button", {
-            type: "button",
-            class: "secondary small",
-            onclick: () => loadHistoryView()
-          }, "Filter"),
-          h("button", {
-            type: "button",
-            class: "primary small",
+          h("input", { type: "date", value: dateTo, style: "padding:3px 6px;font-size:12px",
+            onchange: (e) => { customTo = e.target.value; } }),
+          h("button", { type: "button", class: "secondary small", onclick: () => loadView() }, "Filter"),
+          h("button", { type: "button", class: "primary small",
             onclick: () => {
-              const rows = [
+              const csvRows = [
                 ["Work Date", "First Check-in", "Last Check-out", "Worked Hours", "In / Out Scans"],
                 ...items.map((r) => {
                   let timeStr = "-";
@@ -1224,17 +1297,15 @@ async function openFacultyHistory(user) {
                   return [r.work_date, fmtTime(r.first_check_in), fmtTime(r.last_check_out), timeStr, `${r.check_in_count} / ${r.check_out_count}`];
                 })
               ];
-              downloadCSV(`Attendance_History_${user.full_name}_${dateFrom}_to_${dateTo}.csv`, rows);
+              downloadCSV(`Attendance_History_${user.full_name}_${dateFrom}_to_${dateTo}.csv`, csvRows);
             }
           }, "Export CSV")
         )
       );
 
-      // History Table
+      // History table rows
       const historyRows = items.map((r) => {
-        let workedTimeStr = "-";
-        let statusBadge;
-
+        let workedTimeStr = "-", statusBadge;
         if (r.first_check_in && r.last_check_out) {
           const diff = Math.max(0, (new Date(r.last_check_out) - new Date(r.first_check_in)) / 1000);
           workedTimeStr = `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
@@ -1251,49 +1322,67 @@ async function openFacultyHistory(user) {
         } else {
           statusBadge = chip("Absent", "gray");
         }
-
-        return [
-          r.work_date,
-          fmtTime(r.first_check_in),
-          fmtTime(r.last_check_out),
-          workedTimeStr,
-          `${r.check_in_count} in / ${r.check_out_count} out`,
-          statusBadge
-        ];
+        return [r.work_date, fmtTime(r.first_check_in), fmtTime(r.last_check_out), workedTimeStr,
+          `${r.check_in_count} in / ${r.check_out_count} out`, statusBadge];
       });
 
-      const historyTable = table(
-        ["Date", "Check In", "Check Out", "Total Worked Time", "Scans", "Status"],
-        historyRows
-      );
-
-      dlg.replaceChildren(
-        header,
-        stats,
+      container.replaceChildren(
+        // Stat cards
+        h("div", { class: "stats" }, [
+          ["Days Recorded",    items.length,          null],
+          ["Total Time",       `${totalHours}h ${totalMins}m`, "var(--success)"],
+          ["Avg Daily Time",   avgFmt,                null],
+          ["Total Scans",      events.length,         "var(--blue,#3b82f6)"],
+        ].map(([lbl, v, color]) =>
+          h("div", { class: "stat-card" },
+            h("div", { class: "num", style: color ? `color:${color}` : "" }, String(v)),
+            h("div", { class: "lbl" }, lbl)
+          )
+        )),
         rangeBar,
-        historyTable,
-        h("div", { style: "display:flex;justify-content:flex-end;margin-top:16px" },
-          h("button", { type: "button", class: "secondary", onclick: () => dlg.close() }, "Close")
-        )
+        historyRows.length
+          ? table(["Date", "Check In", "Check Out", "Total Worked", "Scans", "Status"], historyRows)
+          : h("p", { class: "muted" }, "No attendance records found for this range.")
       );
     } catch (err) {
-      dlg.replaceChildren(
-        h("div", { class: "history-header" },
-          h("h2", {}, "Attendance History: " + user.full_name),
-          h("button", { type: "button", class: "close-icon-btn", onclick: () => dlg.close() }, "✕")
-        ),
-        h("p", { class: "msg err" }, err.message || "Failed to load history records."),
-        h("button", { type: "button", class: "secondary", onclick: () => dlg.close() }, "Close")
-      );
+      container.replaceChildren(h("p", { class: "msg err" }, err.message || "Failed to load history."));
     }
   }
 
-  await loadHistoryView();
+  await loadView();
+
+  return [
+    // ── Page header ──
+    h("div", { class: "page-header" },
+      h("div", { style: "display:flex;align-items:center;gap:12px" },
+        h("button", { type: "button", class: "secondary", style: "padding:6px 12px;font-size:13px",
+          onclick: () => { location.hash = backHash; } }, "← Back"),
+        h("div", { style: "display:flex;align-items:center;gap:12px" },
+          h("div", { class: "history-avatar", style: "flex-shrink:0" }, initial),
+          h("div", {},
+            h("h2", {}, user.full_name),
+            h("p", { class: "page-header-desc" },
+              [user.email, user.department ? "Dept: " + user.department : null, "Staff ID #" + user.user_id]
+                .filter(Boolean).join(" · ")
+            )
+          )
+        )
+      )
+    ),
+    container
+  ];
 }
+
+// Keep a thin wrapper so existing callers (dept detail page) still work seamlessly
+function openFacultyHistory(user) {
+  navToStaffHistory(user, location.hash || "#reports");
+}
+
 
 // ============================================================================
 // ---- Users Tab ----
 // ============================================================================
+
 const U = { q: "", role: "", is_active: "", offset: 0 };
 async function users() {
   const limit = 20;
@@ -1556,12 +1645,24 @@ async function attendance() {
 const TABS = { overview, reports, users, departments: departmentsView, attendance };
 let timer = null, seq = 0;
 async function render(keepNote) {
-  const tab = TABS[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  const hash    = location.hash.slice(1);
+  const isDept  = hash.startsWith("dept-");
+  const isStaff = hash.startsWith("staff-");
+  // Sub-pages inherit their parent's nav highlight
+  const tab = isDept ? "overview" : isStaff ? "reports" : (TABS[hash] ? hash : "overview");
+
   document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
   if (keepNote !== true) notify("");
   const mine = ++seq;
   try {
-    const nodes = await TABS[tab]();
+    let nodes;
+    if (isDept) {
+      nodes = await deptDetail(decodeURIComponent(hash.slice(5)));      // strip "dept-"
+    } else if (isStaff) {
+      nodes = await staffHistoryPage(parseInt(hash.slice(6), 10));      // strip "staff-"
+    } else {
+      nodes = await TABS[tab]();
+    }
     if (mine === seq) $("view").replaceChildren(...nodes);
   } catch (e) { if (mine === seq) $("view").replaceChildren(h("p", { class: "msg err" }, e.message)); }
   clearInterval(timer);
