@@ -39,6 +39,7 @@ def create_user(
         username=body.username,
         employee_id=body.employee_id,
         department_id=body.department_id,
+        mobile_number=body.mobile_number,
         full_name=body.full_name,
         role=body.role,
         password_hash=hash_password(body.password or generate_temp_password()),
@@ -62,7 +63,7 @@ def list_users(
     role: Role | None = None,
     is_active: bool | None = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=500)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> UserList:
     stmt = select(User)

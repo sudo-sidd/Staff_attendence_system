@@ -2,68 +2,717 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin - Staff Attendance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Admin — Faculty Attendance</title>
+<link rel="icon" href="/static/img/image.png" type="image/png">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #fff; color: #111; }
-  main { max-width: 1100px; margin: 0 auto; padding: 0 20px 64px; }
-  header { display: flex; justify-content: space-between; align-items: baseline; padding: 24px 0 12px; }
-  header .title { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #666; }
-  header .who { font-size: 13px; color: #666; }
-  nav { display: flex; gap: 24px; border-bottom: 1px solid #ddd; margin-bottom: 28px; }
-  nav a { padding: 8px 0; color: #666; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-  nav a.on { color: #111; border-bottom-color: #111; }
-  h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
-  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
-  .bar .grow { flex: 1; }
-  .bar label { margin: 0; }
-  label { display: block; font-size: 12px; color: #666; }
-  input, select { display: block; width: 100%; min-width: 120px; padding: 6px 0; font: inherit; border: 0; border-bottom: 1px solid #ccc; border-radius: 0; background: transparent; color: inherit; outline: 0; }
-  input:focus, select:focus { border-bottom-color: #111; }
-  button { padding: 7px 16px; font: inherit; border: 1px solid #111; border-radius: 0; background: #111; color: #fff; cursor: pointer; }
-  button.secondary { background: #fff; color: #111; border-color: #ccc; }
-  button.link { padding: 0; border: 0; background: none; color: #111; text-decoration: underline; margin-right: 12px; }
-  button.link.danger { color: #b42318; }
-  button:disabled { opacity: .4; cursor: default; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 24px; }
-  .stats .num { font-size: 30px; font-weight: 600; line-height: 1.1; }
-  .stats .lbl { font-size: 12px; color: #666; }
-  .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #666; padding: 8px 12px 8px 0; border-bottom: 1px solid #111; white-space: nowrap; }
-  td { padding: 8px 12px 8px 0; border-bottom: 1px solid #eee; vertical-align: top; }
-  td.nowrap, .nowrap { white-space: nowrap; }
-  .muted { color: #666; }
-  .pager { display: flex; gap: 8px; align-items: center; margin-top: 16px; color: #666; font-size: 13px; }
-  .note { min-height: 1.4em; margin-bottom: 8px; font-size: 13px; color: #1a7f37; }
-  .note.err, .msg.err { color: #b42318; }
-  .msg { min-height: 1.2em; margin-top: 12px; font-size: 13px; }
-  .row { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
-  dialog { width: 360px; max-width: 92vw; border: 1px solid #ccc; border-radius: 0; padding: 24px; color: #111; }
-  dialog::backdrop { background: rgba(255, 255, 255, .85); }
-  dialog h2 { margin: 0 0 12px; font-size: 18px; }
-  dialog label { margin-top: 16px; }
-  dialog p { margin: 0; color: #444; }
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --blue: #1a73e8;
+    --blue-hover: #1558b0;
+    --blue-tint: #e8f0fe;
+    --surface: #ffffff;
+    --bg: #f8f9fa;
+    --border: #dadce0;
+    --border-light: #edf0f2;
+    --text: #202124;
+    --muted: #5f6368;
+    --danger: #d93025;
+    --danger-tint: #fce8e6;
+    --success: #188038;
+    --success-tint: #e6f4ea;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(60,64,67,.1), 0 2px 6px rgba(60,64,67,.06);
+    --nav-w: 230px;
+  }
+
+  body {
+    margin: 0;
+    font: 14px/1.5 "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- Top bar ---- */
+  #topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    z-index: 100;
+  }
+  #menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px; height: 38px;
+    border: 0;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  #menu-toggle:hover { background: #f1f3f4; color: var(--text); }
+
+  #topbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .brand-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 0 0 2px rgba(26,115,232,.2);
+  }
+  #topbar .spacer { flex: 1; }
+  #topbar .who {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* ---- Drawer Backdrop (Mobile) ---- */
+  #sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(32,33,36,.4);
+    backdrop-filter: blur(2px);
+    z-index: 89;
+  }
+  #sidebar-backdrop.open { display: block; }
+
+  /* ---- Sidebar ---- */
+  #sidebar {
+    position: fixed;
+    top: 56px; left: 0; bottom: 0;
+    width: var(--nav-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 14px 10px;
+    overflow-y: auto;
+    z-index: 90;
+    transition: transform .25s ease;
+  }
+  #sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+    margin-bottom: 2px;
+    transition: background .15s, color .15s;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  #sidebar nav a:hover { background: rgba(32,33,36,.05); }
+  #sidebar nav a.on {
+    background: var(--blue-tint);
+    color: var(--blue);
+    font-weight: 600;
+  }
+  #sidebar nav a svg { flex-shrink: 0; opacity: .8; }
+  #sidebar nav a.on svg { opacity: 1; stroke: var(--blue); }
+
+  /* ---- Main content ---- */
+  #content {
+    margin-top: 56px;
+    margin-left: var(--nav-w);
+    padding: 24px 28px 64px;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ---- Page header ---- */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .page-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .page-header-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ---- Stats grid ---- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(60,64,67,.06);
+  }
+  .stat-card .num {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+  }
+  .stat-card .lbl {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+    font-weight: 500;
+  }
+
+  /* ---- Toolbar / filter bar ---- */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(60,64,67,.06);
+  }
+  .toolbar .grow { flex: 1; min-width: 160px; }
+  .field-group { display: flex; flex-direction: column; gap: 3px; }
+  .field-group label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  input, select {
+    display: block;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    min-width: 120px;
+  }
+  input:focus, select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(26,115,232,.15);
+  }
+
+  /* ---- Buttons ---- */
+  button {
+    padding: 7px 16px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    touch-action: manipulation;
+  }
+  button[type="submit"], button.primary {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+  }
+  button[type="submit"]:hover, button.primary:hover {
+    background: var(--blue-hover);
+    box-shadow: 0 1px 3px rgba(26,115,232,.3);
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--blue);
+    border-color: var(--border);
+  }
+  button.secondary:hover {
+    background: var(--blue-tint);
+    border-color: #c5cae9;
+  }
+  button.small {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  button.link {
+    padding: 0 6px;
+    border: 0;
+    background: none;
+    color: var(--blue);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  button.link:hover { text-decoration: underline; }
+  button.link.danger { color: var(--danger); }
+  button:disabled { opacity: .45; cursor: default; box-shadow: none; }
+
+  /* ---- Table ---- */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    background: #fafafa;
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: rgba(32,33,36,.025); }
+  .nowrap, td.nowrap { white-space: nowrap; }
+  .muted { color: var(--muted); }
+
+  /* ---- Interactive staff row in report ---- */
+  .staff-row {
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .staff-row:hover {
+    background: #f1f6fd !important;
+  }
+  .staff-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .staff-avatar-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--blue-tint);
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    margin-right: 5px;
+    animation: livePulse 1.8s infinite;
+  }
+  @keyframes livePulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: .35; transform: scale(.85); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .badge-progress {
+    display: inline-block;
+    background: #e6f4ea;
+    color: var(--success);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 4px;
+  }
+
+  /* ---- Pager ---- */
+  .pager {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+  }
+  .pager .spacer { flex: 1; }
+
+  /* ---- Notice ---- */
+  #note {
+    min-height: 0;
+    margin-bottom: 0;
+    font-size: 13px;
+    border-radius: 6px;
+    padding: 0;
+    transition: all .15s;
+  }
+  #note:not(:empty) {
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    background: var(--success-tint);
+    color: var(--success);
+    border: 1px solid #b7dfca;
+  }
+  #note.err:not(:empty) {
+    background: var(--danger-tint);
+    color: var(--danger);
+    border-color: #f5c6c2;
+  }
+  .msg { min-height: 1.2em; margin-top: 10px; font-size: 13px; }
+  .msg.err { color: var(--danger); }
+
+  /* ---- Section card ---- */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-top: 20px;
+    overflow: hidden;
+  }
+  .section-card h3 {
+    margin: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-size: 11px;
+    font-weight: 600;
+    background: #fafafa;
+  }
+
+  /* ---- Dialogs ---- */
+  dialog {
+    width: 400px;
+    max-width: 92vw;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    color: var(--text);
+  }
+  dialog::backdrop { background: rgba(32,33,36,.45); }
+  dialog h2 { margin: 0 0 14px; font-size: 17px; font-weight: 600; }
+  dialog p { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+  dialog label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dialog .field { margin-bottom: 14px; }
+  dialog .field input, dialog .field select { width: 100%; }
+  dialog .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  #dlgErr { min-height: 1em; font-size: 12px; color: var(--danger); margin-top: 8px; }
+
+  /* ---- History Drill-Down Dialog ---- */
+  #dlgHistory {
+    width: 860px;
+    max-width: 95vw;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.18);
+    color: var(--text);
+  }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  .history-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .history-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .history-meta h2 {
+    margin: 0 0 3px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .history-meta p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .close-icon-btn {
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background .15s;
+  }
+  .close-icon-btn:hover { background: #f1f3f4; color: var(--text); }
+
+  .history-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .history-stat {
+    background: #f8f9fa;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+  }
+  .history-stat .num { font-size: 18px; font-weight: 600; color: var(--text); }
+  .history-stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+
+  .range-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .range-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .range-btn:hover { background: #f1f3f4; }
+  .range-btn.active {
+    background: var(--blue-tint);
+    border-color: var(--blue);
+    color: var(--blue);
+    font-weight: 600;
+  }
+
+  .btn-logout {
+    padding: 5px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    transition: all .15s;
+  }
+  .btn-logout:hover { background: #f1f3f4; color: var(--text); }
+
+  .empty {
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* ---- Badge / status chips ---- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .chip.green { background: var(--success-tint); color: var(--success); }
+  .chip.red   { background: var(--danger-tint); color: var(--danger); }
+  .chip.blue  { background: var(--blue-tint); color: var(--blue); }
+  .chip.gray  { background: #f1f3f4; color: var(--muted); }
+
+  /* ---- Responsive Mobile Layout ---- */
+  @media (max-width: 768px) {
+    :root { --nav-w: 0px; }
+    #menu-toggle { display: inline-flex; }
+    #sidebar {
+      transform: translateX(-100%);
+      width: 250px;
+      box-shadow: 2px 0 16px rgba(0,0,0,.15);
+    }
+    #sidebar.open { transform: translateX(0); }
+    #content {
+      margin-left: 0;
+      padding: 16px 14px 64px;
+    }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .toolbar {
+      padding: 12px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .toolbar .grow { min-width: 100%; }
+    .toolbar button { width: 100%; }
+  }
+
+  @media (max-width: 480px) {
+    #content { padding: 12px 10px 48px; }
+    .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card { padding: 12px 10px; }
+    .stat-card .num { font-size: 20px; }
+    thead th, tbody td { padding: 8px 10px; font-size: 12px; }
+    dialog { padding: 18px 14px; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <span class="title">Staff Attendance / Admin</span>
-    <span class="who"><span id="who"></span> <button type="button" id="logout" class="link">Log out</button></span>
-  </header>
+
+<!-- Top bar -->
+<header id="topbar">
+  <button id="menu-toggle" aria-label="Toggle menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <a class="brand" href="#" style="display:flex; align-items:center; gap:8px;">
+    <img src="/static/img/image.png" alt="Logo" style="width:24px; height:24px; object-fit:contain; border-radius:4px;">
+    Faculty Attendance
+  </a>
+  <div class="spacer"></div>
+  <div class="who">
+    <a href="/about" class="btn-about" title="About System & Team" style="text-decoration:none; color:var(--muted); font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:16px; border:1px solid var(--border); transition:all .15s; margin-right:4px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      About
+    </a>
+    <div class="avatar" id="avatarInitial">A</div>
+    <span id="who"></span>
+    <button class="btn-logout" id="logout">Sign out</button>
+  </div>
+</header>
+
+<!-- Drawer Backdrop for Mobile -->
+<div id="sidebar-backdrop"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar">
   <nav id="nav">
-    <a href="#overview" data-tab="overview">Overview</a>
-    <a href="#users" data-tab="users">Users</a>
-    <a href="#departments" data-tab="departments">Departments</a>
-    <a href="#attendance" data-tab="attendance">Attendance</a>
+    <a href="#overview" data-tab="overview">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="#reports" data-tab="reports">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Reports
+    </a>
+    <a href="#users" data-tab="users">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Users
+    </a>
+    <a href="#departments" data-tab="departments">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Departments
+    </a>
+    <a href="#attendance" data-tab="attendance">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Attendance Logs
+    </a>
+
+    <div style="height:1px; background:var(--border-light); margin:8px 6px;"></div>
+    <!-- <a href="/about" id="nav-about">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      Our Story &amp; About
+    </a> -->
   </nav>
-  <div class="note" id="note"></div>
+</aside>
+
+<!-- Main -->
+<main id="content">
+  <div id="note"></div>
   <div id="view"></div>
 </main>
 
+<!-- General Form Dialog -->
 <dialog id="dlg"><form id="dlgForm"></form></dialog>
+
+<!-- Faculty Attendance History Dialog -->
+<dialog id="dlgHistory"></dialog>
 
 <script>
 const API = "{{ api }}";
@@ -74,6 +723,26 @@ let me = null, departments = [];
 function logout() { sessionStorage.removeItem("token"); location.replace("/"); }
 $("logout").addEventListener("click", logout);
 if (!token) logout();
+
+// Drawer controls for mobile
+const menuBtn = $("menu-toggle");
+const sidebar = $("sidebar");
+const backdrop = $("sidebar-backdrop");
+
+function toggleDrawer() {
+  sidebar.classList.toggle("open");
+  backdrop.classList.toggle("open");
+}
+function closeDrawer() {
+  sidebar.classList.remove("open");
+  backdrop.classList.remove("open");
+}
+menuBtn.addEventListener("click", toggleDrawer);
+backdrop.addEventListener("click", closeDrawer);
+
+document.querySelectorAll("#nav a").forEach((a) => {
+  a.addEventListener("click", closeDrawer);
+});
 
 // Builds DOM with text nodes only, so server data is never interpreted as markup.
 function h(tag, props, ...kids) {
@@ -103,14 +772,21 @@ async function api(path, { method = "GET", body } = {}) {
 
 const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== "" && v != null)).toString();
 const fmt = (s) => !s ? "-" : new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "Z").toLocaleString();
+const fmtTime = (s) => !s ? "-" : new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + "Z").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const ago = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA");
-function notify(text, err) { const n = $("note"); n.textContent = text || ""; n.className = "note" + (err ? " err" : ""); }
+function notify(text, err) { const n = $("note"); n.textContent = text || ""; n.className = err ? "err" : ""; }
+
+function chip(text, type, extra) {
+  return h("span", { class: "chip " + type }, extra ? [extra, text] : text);
+}
 
 function table(head, rows) {
-  if (!rows.length) return h("p", { class: "muted" }, "Nothing to show.");
-  return h("div", { class: "scroll" }, h("table", {},
-    h("thead", {}, h("tr", {}, head.map((t) => h("th", {}, t)))),
-    h("tbody", {}, rows.map((r) => h("tr", {}, r.map((c) => h("td", { class: typeof c === "string" && c.length < 30 ? "nowrap" : "" }, c)))))));
+  if (!rows.length) return h("div", { class: "empty" }, "No records found.");
+  return h("div", { class: "table-wrap" },
+    h("div", { class: "scroll" },
+      h("table", {},
+        h("thead", {}, h("tr", {}, head.map((t) => h("th", {}, t)))),
+        h("tbody", {}, rows.map((r) => h("tr", {}, r.map((c) => h("td", { class: typeof c === "string" && c.length < 30 ? "nowrap" : "" }, c))))))));
 }
 
 function pager(state, total, limit, reload) {
@@ -118,22 +794,41 @@ function pager(state, total, limit, reload) {
   return h("div", { class: "pager" },
     h("button", { type: "button", class: "secondary", disabled: state.offset === 0, onclick: () => { state.offset -= limit; reload(); } }, "Previous"),
     h("button", { type: "button", class: "secondary", disabled: to >= total, onclick: () => { state.offset += limit; reload(); } }, "Next"),
-    h("span", {}, from + "-" + to + " of " + total));
+    h("div", { class: "spacer" }),
+    h("span", {}, from + "–" + to + " of " + total));
 }
 
-// Modal form. `action(values)` may throw; the message is shown in the dialog.
+function downloadCSV(filename, rows) {
+  const processRow = (row) => row.map((val) => {
+    let text = val == null ? "" : String(val);
+    text = text.replace(/"/g, '""');
+    if (text.search(/("|,|\n)/g) >= 0) text = `"${text}"`;
+    return text;
+  }).join(",");
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(processRow).join("\r\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Modal form helper
 function ask(title, fields, label, action, text) {
   const dlg = $("dlg"), form = $("dlgForm");
   form.replaceChildren(...[
     h("h2", {}, title), text ? h("p", {}, text) : null,
-    ...fields.map((f) => h("label", {}, f.label,
+    ...fields.map((f) => h("div", { class: "field" },
+      h("label", {}, f.label),
       f.options
         ? h("select", { name: f.name }, f.options.map(([v, t]) => h("option", { value: v, selected: String(v) === String(f.value) }, t)))
         : h("input", { name: f.name, type: f.type || "text", value: f.value ?? "", required: !!f.required, minlength: f.minlength, autocomplete: "off" }))),
     h("div", { class: "row" },
       h("button", { type: "submit" }, label),
       h("button", { type: "button", class: "secondary", onclick: () => dlg.close() }, "Cancel")),
-    h("div", { class: "msg err", id: "dlgErr" }),
+    h("div", { id: "dlgErr" }),
   ].filter(Boolean));
   form.onsubmit = async (e) => {
     e.preventDefault();
@@ -144,50 +839,722 @@ function ask(title, fields, label, action, text) {
 }
 
 async function loadDepartments() { departments = await api("/departments"); }
-const deptOptions = (blank) => [["", blank], ...departments.map((d) => [d.id, d.code + " - " + d.name])];
+const deptOptions = (blank) => [["", blank], ...departments.map((d) => [d.id, d.name])];
 
-// ---- Overview ----
+// ============================================================================
+// ---- Overview Tab ----
+// ============================================================================
+
 async function overview() {
-  const [s, ev] = await Promise.all([api("/admin/summary"), api("/attendance/events?" + qs({ limit: 15, date_from: ago(30) }))]);
-  const stat = ([label, v]) => h("div", {}, h("div", { class: "num" }, String(v)), h("div", { class: "lbl" }, label));
+  const [s, rep] = await Promise.all([
+    api("/admin/summary"),
+    api("/attendance/daily-report")
+  ]);
+  if (!departments.length) await loadDepartments();
+
+  // Aggregate staff attendance per department for today
+  const deptCounts = {};
+  departments.forEach((d) => { deptCounts[d.name] = { present: 0, absent: 0 }; });
+  let unassignedPresent = 0, unassignedAbsent = 0;
+
+  const allItems = rep.items || [];
+
+  allItems.forEach((u) => {
+    const isPresent = u.status === "checked_in" || u.status === "checked_out";
+    if (u.department && deptCounts[u.department]) {
+      if (isPresent) deptCounts[u.department].present++;
+      else deptCounts[u.department].absent++;
+    } else if (u.department) {
+      deptCounts[u.department] = { present: isPresent ? 1 : 0, absent: isPresent ? 0 : 1 };
+    } else {
+      if (isPresent) unassignedPresent++; else unassignedAbsent++;
+    }
+  });
+
+  // Build dept table — clicking a name navigates to the dept detail page
+  const deptRows = departments.map((d) => {
+    const counts = deptCounts[d.name] || { present: 0, absent: 0 };
+    return [
+      h("button", { type: "button", class: "link",
+        onclick: () => { location.hash = "#dept-" + encodeURIComponent(d.name); } }, d.name),
+      String(counts.present),
+      String(counts.absent)
+    ];
+  });
+  if (unassignedPresent > 0 || unassignedAbsent > 0) {
+    deptRows.push([
+      h("button", { type: "button", class: "link",
+        onclick: () => { location.hash = "#dept-" + encodeURIComponent("Unassigned / General"); } }, "Unassigned / General"),
+      String(unassignedPresent),
+      String(unassignedAbsent)
+    ]);
+  }
+
+  // Recent attendance log — last 8 present staff sorted by most recent check-in
+  const recentRows = [...allItems]
+    .filter(u => u.first_check_in)
+    .sort((a, b) => new Date(b.first_check_in) - new Date(a.first_check_in))
+    .slice(0, 8)
+    .map(u => [
+      u.full_name || "—",
+      u.department || h("span", { class: "muted" }, "—"),
+      h("span", { style: "color:var(--success)" }, fmtTime(u.first_check_in)),
+      u.last_check_out ? h("span", { style: "color:var(--warning,#f59e0b)" }, fmtTime(u.last_check_out)) : h("span", { class: "muted" }, "Still in"),
+      u.total_time_formatted || "—",
+      chip(
+        u.status === "checked_in" ? "Currently In" : u.status === "checked_out" ? "Checked Out" : "Absent",
+        u.status === "checked_in" ? "blue" : u.status === "checked_out" ? "green" : "gray"
+      )
+    ]);
+
   return [
+    h("div", { class: "page-header" },
+      h("div", {},
+        h("h2", {}, "Dashboard"),
+        h("p", { class: "page-header-desc" }, "Live department attendance summary for today (" + (rep.work_date || "Today") + ")")
+      ),
+      h("button", { type: "button", class: "secondary", onclick: () => render() }, "Refresh")),
     h("div", { class: "stats" }, [
-      ["Users", s.users_total], ["Active", s.users_active], ["Face enrolled", s.users_face_enrolled],
-      ["Departments", s.departments], ["Checked in today", s.checked_in_today], ["In now", s.currently_in],
-    ].map(stat)),
-    h("h2", {}, "Recent activity"),
-    table(["Time", "Name", "Employee ID", "Event"],
-      ev.items.map((e) => [fmt(e.occurred_at), e.full_name || "User " + e.user_id, e.employee_id || "-", e.event_type === "check_in" ? "Check in" : "Check out"])),
-    h("div", { class: "row" }, h("button", { type: "button", class: "secondary", onclick: () => render() }, "Refresh")),
+      ["Total Staff", rep.total_staff || s.users_total],
+      ["Present Today", rep.present_count || 0],
+      ["Currently In", rep.currently_in_count || s.currently_in],
+      ["Absent Today", rep.absent_count || 0],
+      ["Departments", departments.length || s.departments],
+    ].map(([lbl, v]) => h("div", { class: "stat-card" }, h("div", { class: "num" }, String(v)), h("div", { class: "lbl" }, lbl)))),
+    h("h3", { style: "margin:24px 0 10px;font-size:1rem" }, "🏢 Department Attendance"),
+    table(["Department Name", "No.Present", "No.Absent"], deptRows),
+    h("h3", { style: "margin:28px 0 10px;font-size:1rem" }, "🕐 Recent Attendance Log"),
+    recentRows.length
+      ? table(["Name", "Department", "Check In", "Check Out", "Total Time", "Status"], recentRows)
+      : h("p", { class: "muted" }, "No attendance events today yet.")
   ];
 }
 
-// ---- Users ----
-const U = { q: "", role: "", is_active: "", offset: 0 };
+// ============================================================================
+// ---- Department Detail Page (navigated via #dept-<name>) ----
+// ============================================================================
+async function deptDetail(deptName) {
+  const rep = await api("/attendance/daily-report");
+  const allItems = rep.items || [];
+  const deptItems = allItems.filter(u => (u.department || "Unassigned / General") === deptName);
+  const present     = deptItems.filter(u => u.status !== "absent");
+  const absent      = deptItems.filter(u => u.status === "absent");
+  const currentlyIn = present.filter(u => u.status === "checked_in").length;
+  const checkedOut  = present.filter(u => u.status === "checked_out").length;
+
+  // Attendance log rows sorted most-recent first
+  const logRows = [...present]
+    .sort((a, b) => new Date(b.first_check_in || 0) - new Date(a.first_check_in || 0))
+    .map(u => [
+      u.full_name || "—",
+      u.employee_id || h("span", { class: "muted" }, "—"),
+      u.first_check_in ? h("span", { style: "color:var(--success)" }, fmtTime(u.first_check_in)) : h("span", { class: "muted" }, "—"),
+      u.last_check_out ? h("span", { style: "color:var(--warning,#f59e0b)" }, fmtTime(u.last_check_out)) : h("span", { class: "muted" }, "Still in"),
+      u.total_time_formatted || "—",
+      chip(
+        u.status === "checked_in" ? "Currently In" : "Checked Out",
+        u.status === "checked_in" ? "blue" : "green"
+      )
+    ]);
+
+  const presentRows = present.map(u => [
+    u.full_name || "—",
+    u.email || "—",
+    u.employee_id || h("span", { class: "muted" }, "—"),
+    chip(u.status === "checked_in" ? "Currently In" : "Checked Out",
+         u.status === "checked_in" ? "blue" : "green"),
+    h("button", { type: "button", class: "secondary small",
+      onclick: () => openFacultyHistory(u) }, "View History →")
+  ]);
+
+  const absentRows = absent.map(u => [
+    u.full_name || "—",
+    u.email || "—",
+    u.employee_id || h("span", { class: "muted" }, "—"),
+    chip("Absent", "gray"),
+    h("button", { type: "button", class: "secondary small",
+      onclick: () => openFacultyHistory(u) }, "View History →")
+  ]);
+
+  return [
+    // ── Page header: back + title only ──
+    h("div", { class: "page-header" },
+      h("div", { style: "display:flex;align-items:center;gap:12px" },
+        h("button", { type: "button", class: "secondary", style: "padding:6px 12px;font-size:13px",
+          onclick: () => { location.hash = "#overview"; } }, "← Back"),
+        h("div", {},
+          h("h2", {}, deptName),
+          h("p", { class: "page-header-desc" },
+            `Attendance detail for ${rep.work_date || "today"} · ${present.length} present · ${absent.length} absent`)
+        )
+      )
+    ),
+    // ── Stat cards — full-width grid outside page-header ──
+    h("div", { class: "stats" }, [
+      ["Present",      present.length, "var(--success)"],
+      ["Currently In", currentlyIn,    "var(--blue,#3b82f6)"],
+      ["Checked Out",  checkedOut,     null],
+      ["Absent",       absent.length,  "var(--danger)"],
+    ].map(([lbl, v, color]) =>
+      h("div", { class: "stat-card" },
+        h("div", { class: "num", style: color ? `color:${color}` : "" }, String(v)),
+        h("div", { class: "lbl" }, lbl)
+      )
+    )),
+    // ── Attendance log ──
+    h("h3", { style: "margin:20px 0 10px;font-size:1rem" }, "🕐 Attendance Log (Present Staff)"),
+    logRows.length
+      ? table(["Name", "Employee ID", "Check In", "Check Out", "Total Time", "Status"], logRows)
+      : h("p", { class: "muted" }, "No one has checked in yet."),
+    // ── Present list ──
+    h("h3", { style: "margin:28px 0 10px;font-size:1rem;color:var(--success)" }, `✓ Present (${present.length})`),
+    presentRows.length
+      ? table(["Name", "Email", "Employee ID", "Status", "Action"], presentRows)
+      : h("p", { class: "muted" }, "None"),
+    // ── Absent list ──
+    h("h3", { style: "margin:28px 0 10px;font-size:1rem;color:var(--danger)" }, `✗ Absent (${absent.length})`),
+    absentRows.length
+      ? table(["Name", "Email", "Employee ID", "Status", "Action"], absentRows)
+      : h("p", { class: "muted" }, "None")
+  ];
+}
+
+// ============================================================================
+// ---- Reports Tab (Staff Daily Attendance & Total Today Time) ----
+// ============================================================================
+const R = { date: "", q: "", dept: "", status: "" };
+
+async function reports() {
+  if (!R.date) R.date = new Date().toLocaleDateString("en-CA");
+  if (!departments.length) await loadDepartments();
+
+  const rep = await api("/attendance/daily-report?" + qs({ work_date: R.date }));
+
+  // Filter items in memory by search, department, and status
+  const qLower = R.q.toLowerCase().trim();
+  const filtered = rep.items.filter((item) => {
+    if (qLower) {
+      const matchName = (item.full_name || "").toLowerCase().includes(qLower);
+      const matchEmail = (item.email || "").toLowerCase().includes(qLower);
+      const matchId = String(item.user_id) === qLower;
+      if (!matchName && !matchEmail && !matchId) return false;
+    }
+    if (R.dept && item.department !== R.dept) return false;
+    if (R.status) {
+      if (R.status === "present" && item.status === "absent") return false;
+      if (R.status !== "present" && item.status !== R.status) return false;
+    }
+    return true;
+  });
+
+  // Toolbar / filter form
+  const filters = h("form", {
+    class: "toolbar",
+    onsubmit: (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      Object.assign(R, {
+        date: f.get("date"),
+        q: f.get("q").trim(),
+        dept: f.get("dept"),
+        status: f.get("status")
+      });
+      render();
+    }
+  },
+    h("div", { class: "field-group" },
+      h("label", {}, "Date"),
+      h("input", { name: "date", type: "date", value: R.date })
+    ),
+    h("div", { class: "field-group grow" },
+      h("label", {}, "Search Staff"),
+      h("input", { name: "q", value: R.q, placeholder: "Search by name, email, or ID..." })
+    ),
+    h("div", { class: "field-group" },
+      h("label", {}, "Department"),
+      h("select", { name: "dept" }, [
+        ["", "All Departments"],
+        ...departments.map((d) => [d.name, d.name])
+      ].map(([v, t]) => h("option", { value: v, selected: v === R.dept }, t)))
+    ),
+    h("div", { class: "field-group" },
+      h("label", {}, "Status"),
+      h("select", { name: "status" }, [
+        ["", "All Statuses"],
+        ["checked_in", "Currently In"],
+        ["checked_out", "Checked Out"],
+        ["absent", "Absent"],
+        ["present", "Any Present"]
+      ].map(([v, t]) => h("option", { value: v, selected: v === R.status }, t)))
+    ),
+    h("button", { type: "submit" }, "Apply Filter"),
+    h("button", {
+      type: "button",
+      class: "secondary",
+      onclick: () => {
+        const rows = [
+          ["Staff ID", "Full Name", "Email", "Department", "Check-in Time", "Check-out Time", "Total Worked Time", "Status"],
+          ...filtered.map((u) => [
+            u.user_id,
+            u.full_name,
+            u.email,
+            u.department || "-",
+            fmtTime(u.first_check_in),
+            fmtTime(u.last_check_out),
+            u.total_time_formatted,
+            u.status === "checked_in" ? "Currently In" : (u.status === "checked_out" ? "Checked Out" : "Absent")
+          ])
+        ];
+        downloadCSV(`Staff_Attendance_Report_${R.date}.csv`, rows);
+      }
+    },
+      h("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2" },
+        h("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+        h("polyline", { points: "7 10 12 15 17 10" }),
+        h("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+      ),
+      "Export CSV"
+    )
+  );
+
+  // Stat summary cards
+  const stats = h("div", { class: "stats" },
+    h("div", { class: "stat-card" }, h("div", { class: "num" }, String(rep.total_staff)), h("div", { class: "lbl" }, "Total Staff")),
+    h("div", { class: "stat-card" }, h("div", { class: "num", style: "color:var(--success)" }, String(rep.present_count)), h("div", { class: "lbl" }, "Present Today")),
+    h("div", { class: "stat-card" }, h("div", { class: "num", style: "color:var(--blue)" }, String(rep.currently_in_count)), h("div", { class: "lbl" }, "Currently In")),
+    h("div", { class: "stat-card" }, h("div", { class: "num" }, String(rep.present_count - rep.currently_in_count)), h("div", { class: "lbl" }, "Checked Out")),
+    h("div", { class: "stat-card" }, h("div", { class: "num", style: "color:var(--danger)" }, String(rep.absent_count)), h("div", { class: "lbl" }, "Absent"))
+  );
+
+  // Custom table with interactive staff rows
+  const head = ["ID", "Staff Name", "Email", "Department", "Check in", "Check out", "Total Today Time", "Status", "Action"];
+  const rows = filtered.map((u) => {
+    const initial = (u.full_name || "S").charAt(0).toUpperCase();
+    
+    // Status chip
+    let statusChip;
+    if (u.status === "checked_in") {
+      statusChip = chip("Currently In", "green", h("span", { class: "live-dot" }));
+    } else if (u.status === "checked_out") {
+      statusChip = chip("Checked Out", "blue");
+    } else {
+      statusChip = chip("Absent", "gray");
+    }
+
+    // Total time cell with in-progress indicator
+    const totalTimeNode = h("span", { class: "nowrap" },
+      u.total_time_formatted,
+      u.is_checked_in ? h("span", { class: "badge-progress" }, "Live") : null
+    );
+
+    return h("tr", {
+      class: "staff-row",
+      title: "Click to view full attendance history for " + u.full_name,
+      onclick: () => navToStaffHistory(u, "#reports")
+    },
+      h("td", { class: "muted nowrap", style: "font-weight:600" }, String(u.user_id)),
+      h("td", {},
+        h("div", { class: "staff-cell" },
+          h("div", { class: "staff-avatar-sm" }, initial),
+          h("div", {},
+            h("div", { style: "font-weight:500;color:var(--text)" }, u.full_name)
+          )
+        )
+      ),
+      h("td", { class: "muted" }, u.email),
+      h("td", { class: "nowrap" }, u.department || "-"),
+      h("td", { class: "nowrap" }, u.first_check_in ? fmtTime(u.first_check_in) : h("span", { class: "muted" }, "-")),
+      h("td", { class: "nowrap" }, u.last_check_out ? fmtTime(u.last_check_out) : h("span", { class: "muted" }, "-")),
+      h("td", { class: "nowrap", style: "font-weight:500" }, totalTimeNode),
+      h("td", { class: "nowrap" }, statusChip),
+      h("td", { class: "nowrap" },
+        h("button", {
+          type: "button",
+          class: "secondary small",
+          onclick: (e) => {
+            e.stopPropagation();
+            navToStaffHistory(u, "#reports");
+          }
+        }, "View History →")
+      )
+    );
+  });
+
+  const tableWrap = h("div", { class: "table-wrap" },
+    h("div", { class: "scroll" },
+      h("table", {},
+        h("thead", {}, h("tr", {}, head.map((t) => h("th", {}, t)))),
+        h("tbody", {}, rows.length ? rows : [h("tr", {}, h("td", { colspan: head.length, class: "empty" }, "No staff matching criteria."))])
+      )
+    )
+  );
+
+  return [
+    h("div", { class: "page-header" },
+      h("div", {},
+        h("h2", {}, "Staff Attendance Reports"),
+        h("p", { class: "page-header-desc" }, "Live daily attendance status, total working hours, and individual staff history")
+      ),
+      h("div", { style: "display:flex;gap:8px" },
+        h("button", { type: "button", class: "secondary", onclick: () => render() }, "Refresh")
+      )
+    ),
+    stats,
+    filters,
+    tableWrap
+  ];
+}
+
+// ============================================================================
+// ---- Staff History Page (navigated via #staff-<userId>) ----
+// ============================================================================
+// Cache user objects so the router can retrieve them by id
+const staffCache = {};
+function navToStaffHistory(user, backHash) {
+  staffCache[user.user_id] = { ...user, _backHash: backHash || "#reports" };
+  location.hash = "#staff-" + user.user_id;
+}
+
+async function staffHistoryPage(userId) {
+  const cached = staffCache[userId] || {};
+  const backHash = cached._backHash || "#reports";
+
+  // We may not have a cached user — fetch a minimal stub from the API
+  let user = cached;
+  if (!user.full_name) {
+    try {
+      const u = await api("/users/" + userId);
+      user = { user_id: u.id, full_name: u.full_name, email: u.email, department: u.department?.name };
+    } catch {
+      user = { user_id: userId, full_name: "Staff #" + userId, email: "" };
+    }
+  }
+
+  const container = h("div", { id: "staff-hist-wrap" },
+    h("p", { class: "muted", style: "padding:40px;text-align:center" }, "Loading history…")
+  );
+
+  let daysRange = 30;
+  let customFrom = "", customTo = "";
+  const initial = (user.full_name || "S").charAt(0).toUpperCase();
+
+  async function loadView() {
+    let dateFrom, dateTo;
+    if (customFrom && customTo) {
+      dateFrom = customFrom; dateTo = customTo;
+    } else {
+      dateTo = new Date().toLocaleDateString("en-CA");
+      dateFrom = ago(daysRange);
+    }
+    try {
+      const [recordsData, eventsData] = await Promise.all([
+        api("/attendance/records?" + qs({ user_id: user.user_id, date_from: dateFrom, date_to: dateTo, limit: 150 })),
+        api("/attendance/events?"  + qs({ user_id: user.user_id, date_from: dateFrom, date_to: dateTo, limit: 150 }))
+      ]);
+      const items  = recordsData.items || [];
+      const events = eventsData.items  || [];
+
+      let totalWorkedSec = 0, fullDaysCount = 0;
+      items.forEach((r) => {
+        if (r.first_check_in && r.last_check_out) {
+          const diff = (new Date(r.last_check_out) - new Date(r.first_check_in)) / 1000;
+          if (diff > 0) { totalWorkedSec += diff; fullDaysCount++; }
+        }
+      });
+      const totalHours = Math.floor(totalWorkedSec / 3600);
+      const totalMins  = Math.floor((totalWorkedSec % 3600) / 60);
+      const avgMins    = fullDaysCount ? Math.round((totalWorkedSec / fullDaysCount) / 60) : 0;
+      const avgFmt     = `${Math.floor(avgMins / 60)}h ${avgMins % 60}m`;
+
+      // Range preset buttons
+      const presetButtons = [
+        ["Last 7 Days", 7], ["Last 30 Days", 30], ["Last 90 Days", 90], ["Past Year", 365]
+      ].map(([label, d]) => h("button", {
+        type: "button",
+        class: "range-btn " + (daysRange === d && !customFrom ? "active" : ""),
+        onclick: () => { daysRange = d; customFrom = ""; customTo = ""; loadView(); }
+      }, label));
+
+      const rangeBar = h("div", { class: "range-bar" },
+        ...presetButtons,
+        h("div", { style: "display:flex;align-items:center;gap:6px;margin-left:auto" },
+          h("input", { type: "date", value: dateFrom, style: "padding:3px 6px;font-size:12px",
+            onchange: (e) => { customFrom = e.target.value; } }),
+          h("span", { class: "muted", style: "font-size:12px" }, "to"),
+          h("input", { type: "date", value: dateTo, style: "padding:3px 6px;font-size:12px",
+            onchange: (e) => { customTo = e.target.value; } }),
+          h("button", { type: "button", class: "secondary small", onclick: () => loadView() }, "Filter"),
+          h("button", { type: "button", class: "primary small",
+            onclick: () => {
+              const csvRows = [
+                ["Work Date", "First Check-in", "Last Check-out", "Worked Hours", "In / Out Scans"],
+                ...items.map((r) => {
+                  let timeStr = "-";
+                  if (r.first_check_in && r.last_check_out) {
+                    const diff = Math.max(0, (new Date(r.last_check_out) - new Date(r.first_check_in)) / 1000);
+                    timeStr = `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+                  }
+                  return [r.work_date, fmtTime(r.first_check_in), fmtTime(r.last_check_out), timeStr, `${r.check_in_count} / ${r.check_out_count}`];
+                })
+              ];
+              downloadCSV(`Attendance_History_${user.full_name}_${dateFrom}_to_${dateTo}.csv`, csvRows);
+            }
+          }, "Export CSV")
+        )
+      );
+
+      // History table rows
+      const historyRows = items.map((r) => {
+        let workedTimeStr = "-", statusBadge;
+        if (r.first_check_in && r.last_check_out) {
+          const diff = Math.max(0, (new Date(r.last_check_out) - new Date(r.first_check_in)) / 1000);
+          workedTimeStr = `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+          statusBadge = chip("Completed", "green");
+        } else if (r.first_check_in) {
+          const isToday = r.work_date === new Date().toLocaleDateString("en-CA");
+          if (isToday) {
+            const diff = Math.max(0, (Date.now() - new Date(r.first_check_in).getTime()) / 1000);
+            workedTimeStr = `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+            statusBadge = chip("In progress", "blue");
+          } else {
+            statusBadge = chip("No check-out", "red");
+          }
+        } else {
+          statusBadge = chip("Absent", "gray");
+        }
+        return [r.work_date, fmtTime(r.first_check_in), fmtTime(r.last_check_out), workedTimeStr,
+          `${r.check_in_count} in / ${r.check_out_count} out`, statusBadge];
+      });
+
+      container.replaceChildren(
+        // Stat cards
+        h("div", { class: "stats" }, [
+          ["Days Recorded",    items.length,          null],
+          ["Total Time",       `${totalHours}h ${totalMins}m`, "var(--success)"],
+          ["Avg Daily Time",   avgFmt,                null],
+          ["Total Scans",      events.length,         "var(--blue,#3b82f6)"],
+        ].map(([lbl, v, color]) =>
+          h("div", { class: "stat-card" },
+            h("div", { class: "num", style: color ? `color:${color}` : "" }, String(v)),
+            h("div", { class: "lbl" }, lbl)
+          )
+        )),
+        rangeBar,
+        historyRows.length
+          ? table(["Date", "Check In", "Check Out", "Total Worked", "Scans", "Status"], historyRows)
+          : h("p", { class: "muted" }, "No attendance records found for this range.")
+      );
+    } catch (err) {
+      container.replaceChildren(h("p", { class: "msg err" }, err.message || "Failed to load history."));
+    }
+  }
+
+  await loadView();
+
+  return [
+    // ── Page header ──
+    h("div", { class: "page-header" },
+      h("div", { style: "display:flex;align-items:center;gap:12px" },
+        h("button", { type: "button", class: "secondary", style: "padding:6px 12px;font-size:13px",
+          onclick: () => { location.hash = backHash; } }, "← Back"),
+        h("div", { style: "display:flex;align-items:center;gap:12px" },
+          h("div", { class: "history-avatar", style: "flex-shrink:0" }, initial),
+          h("div", {},
+            h("h2", {}, user.full_name),
+            h("p", { class: "page-header-desc" },
+              [user.email, user.department ? "Dept: " + user.department : null, "Staff ID #" + user.user_id]
+                .filter(Boolean).join(" · ")
+            )
+          )
+        )
+      )
+    ),
+    container
+  ];
+}
+
+// Keep a thin wrapper so existing callers (dept detail page) still work seamlessly
+function openFacultyHistory(user) {
+  navToStaffHistory(user, location.hash || "#reports");
+}
+
+
+// ============================================================================
+// ---- Users Tab ----
+// ============================================================================
+
+const U = { q: "", role: "", is_active: "", face_enrolled: "", dept: "", sort_dept: false, offset: 0 };
 async function users() {
-  const limit = 20;
-  const [list] = await Promise.all([api("/users?" + qs({ ...U, limit })), departments.length ? null : loadDepartments()]);
+  const fetchLimit = 500; // matches new server max
+  const [firstPage] = await Promise.all([
+    api("/users?" + qs({ q: U.q, role: U.role, is_active: U.is_active, limit: fetchLimit, offset: 0 })),
+    departments.length ? null : loadDepartments()
+  ]);
+
+  // If more pages exist, fetch them all (for large orgs)
+  let allUsers = firstPage.items || [];
+  if (firstPage.total > fetchLimit) {
+    const extra = [];
+    for (let off = fetchLimit; off < firstPage.total; off += fetchLimit) {
+      extra.push(api("/users?" + qs({ q: U.q, role: U.role, is_active: U.is_active, limit: fetchLimit, offset: off })));
+    }
+    const pages = await Promise.all(extra);
+    pages.forEach(p => { allUsers = allUsers.concat(p.items || []); });
+  }
+
+  // Client-side filter: face_enrolled and department
+  let items = allUsers;
+  if (U.face_enrolled !== "") {
+    const want = U.face_enrolled === "true";
+    items = items.filter(u => !!u.face_enrolled === want);
+  }
+  if (U.dept !== "") {
+    items = items.filter(u => u.department && String(u.department.id) === U.dept);
+  }
+  // Sort by department name then name
+  if (U.sort_dept) {
+    items = [...items].sort((a, b) => {
+      const da = a.department?.name || "zzz", db2 = b.department?.name || "zzz";
+      return da.localeCompare(db2) || a.full_name.localeCompare(b.full_name);
+    });
+  }
+
+  // Stat counts
+  const total     = items.length;
+  const faceYes   = items.filter(u => u.face_enrolled).length;
+  const faceNo    = items.filter(u => !u.face_enrolled).length;
+  const active    = items.filter(u => u.is_active).length;
+  const inactive  = items.filter(u => !u.is_active).length;
+
+  // Pagination slice
+  const pageLimit = 25;
+  const pageItems = items.slice(U.offset, U.offset + pageLimit);
+
   const sel = (name, opts, val) => h("select", { name }, opts.map(([v, t]) => h("option", { value: v, selected: v === val }, t)));
-  const filters = h("form", { class: "bar", onsubmit: (e) => {
+
+  const filters = h("form", { class: "toolbar", onsubmit: (e) => {
     e.preventDefault(); const f = new FormData(e.target);
-    Object.assign(U, { q: f.get("q").trim(), role: f.get("role"), is_active: f.get("is_active"), offset: 0 }); render();
-  } },
-    h("label", { class: "grow" }, "Search name, email, username, employee ID", h("input", { name: "q", value: U.q })),
-    h("label", {}, "Role", sel("role", [["", "All"], ["admin", "admin"], ["system", "system"], ["staff", "staff"]], U.role)),
-    h("label", {}, "Status", sel("is_active", [["", "All"], ["true", "Active"], ["false", "Inactive"]], U.is_active)),
+    Object.assign(U, {
+      q: f.get("q").trim(),
+      role: f.get("role"),
+      is_active: f.get("is_active"),
+      face_enrolled: f.get("face_enrolled"),
+      dept: f.get("dept"),
+      sort_dept: f.get("sort_dept") === "on",
+      offset: 0
+    });
+    render();
+  }},
+    h("div", { class: "field-group grow" }, h("label", {}, "Search"), h("input", { name: "q", value: U.q, placeholder: "Name, email, ID…" })),
+    h("div", { class: "field-group" }, h("label", {}, "Role"),    sel("role",    [["", "All roles"],  ["admin", "Admin"], ["system", "System"], ["staff", "Staff"]], U.role)),
+    h("div", { class: "field-group" }, h("label", {}, "Status"),  sel("is_active", [["", "All"], ["true", "Active"], ["false", "Inactive"]], U.is_active)),
+    h("div", { class: "field-group" }, h("label", {}, "Face Enrolled"), sel("face_enrolled", [["", "All"], ["true", "Yes ✓"], ["false", "No ✗"]], U.face_enrolled)),
+    h("div", { class: "field-group" }, h("label", {}, "Department"),
+      h("select", { name: "dept" },
+        [h("option", { value: "" }, "All Departments"),
+         ...departments.map(d => h("option", { value: String(d.id), selected: String(d.id) === U.dept }, d.name))]
+      )
+    ),
+    h("div", { class: "field-group", style: "align-self:flex-end;padding-bottom:4px" },
+      h("label", { style: "display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap" },
+        h("input", { type: "checkbox", name: "sort_dept", checked: U.sort_dept, style: "width:auto" }),
+        "Sort by Dept"
+      )
+    ),
     h("button", { type: "submit" }, "Search"),
-    h("button", { type: "button", class: "secondary", onclick: addUser }, "Add user"));
-  const rows = list.items.map((u) => {
+    h("button", { type: "button", onclick: addUser }, "Add user"),
+    // Export CSV
+    h("button", { type: "button", class: "secondary",
+      onclick: () => {
+        const csvRows = [
+          ["ID", "Name", "Email", "Department", "Role", "Status", "Face Enrolled", "Employee ID", "Last Login"],
+          ...items.map(u => [
+            u.id, u.full_name, u.email,
+            u.department?.name || "-",
+            u.role,
+            u.is_active ? "Active" : "Inactive",
+            u.face_enrolled ? "Yes" : "No",
+            u.employee_id || "-",
+            fmt(u.last_login_at)
+          ])
+        ];
+        downloadCSV(`Users_Export_${new Date().toLocaleDateString("en-CA")}.csv`, csvRows);
+      }
+    },
+      h("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", style: "vertical-align:text-bottom;margin-right:4px" },
+        h("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+        h("polyline", { points: "7 10 12 15 17 10" }),
+        h("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+      ),
+      "Export CSV"
+    )
+  );
+
+  const rows = pageItems.map((u) => {
     const self = u.id === me.id;
-    return [String(u.id), u.full_name, u.username || "-", u.email, u.employee_id || "-",
-      u.department ? u.department.name : "-", u.role, u.is_active ? "Active" : "Inactive", u.face_enrolled ? "Yes" : "No", fmt(u.last_login_at),
+    return [
+      String(u.id),
+      u.full_name,
+      u.email,
+      u.department ? u.department.name : h("span", { class: "muted" }, "—"),
+      u.role,
+      chip(u.is_active ? "Active" : "Inactive", u.is_active ? "green" : "gray"),
+      chip(u.face_enrolled ? "Yes" : "No", u.face_enrolled ? "green" : "red"),
+      h("span", { class: "muted" }, fmt(u.last_login_at)),
       h("span", { class: "nowrap" },
         h("button", { type: "button", class: "link", disabled: self, onclick: () => setActive(u) }, u.is_active ? "Deactivate" : "Activate"),
         h("button", { type: "button", class: "link", onclick: () => setPassword(u) }, "Password"),
-        h("button", { type: "button", class: "link danger", disabled: self, onclick: () => removeUser(u) }, "Delete"))];
+        h("button", { type: "button", class: "link danger", disabled: self, onclick: () => removeUser(u) }, "Delete"))
+    ];
   });
-  return [filters, table(["ID", "Name", "Username", "Email", "Employee ID", "Department", "Role", "Status", "Face", "Last login", ""], rows),
-    pager(U, list.total, limit, render)];
+
+  // Simple pager for client-side sliced data
+  const from = total ? U.offset + 1 : 0;
+  const to   = Math.min(U.offset + pageLimit, total);
+  const clientPager = h("div", { class: "pager" },
+    h("button", { type: "button", class: "secondary", disabled: U.offset === 0,
+      onclick: () => { U.offset -= pageLimit; render(); } }, "Previous"),
+    h("button", { type: "button", class: "secondary", disabled: to >= total,
+      onclick: () => { U.offset += pageLimit; render(); } }, "Next"),
+    h("div", { class: "spacer" }),
+    h("span", {}, `${from}–${to} of ${total}`)
+  );
+
+  return [
+    h("div", { class: "page-header" },
+      h("div", {},
+        h("h2", {}, "Users"),
+        h("p", { class: "page-header-desc" }, `${total} user${total !== 1 ? "s" : ""} matching current filters`)
+      )
+    ),
+    // ── Stat cards ──
+    h("div", { class: "stats" }, [
+      ["Total",         total,    null],
+      ["Face Enrolled", faceYes,  "var(--success)"],
+      ["Not Enrolled",  faceNo,   "var(--danger)"],
+      ["Active",        active,   "var(--blue,#3b82f6)"],
+      ["Inactive",      inactive, null],
+    ].map(([lbl, v, color]) =>
+      h("div", { class: "stat-card", style: "cursor:default",
+        onclick: () => {
+          // Quick-filter on card click
+          if (lbl === "Face Enrolled") { U.face_enrolled = "true";  U.offset = 0; render(); }
+          if (lbl === "Not Enrolled")  { U.face_enrolled = "false"; U.offset = 0; render(); }
+          if (lbl === "Active")        { U.is_active = "true";      U.offset = 0; render(); }
+          if (lbl === "Inactive")      { U.is_active = "false";     U.offset = 0; render(); }
+          if (lbl === "Total")         { U.face_enrolled = ""; U.is_active = ""; U.dept = ""; U.offset = 0; render(); }
+        }
+      },
+        h("div", { class: "num", style: color ? `color:${color}` : "" }, String(v)),
+        h("div", { class: "lbl" }, lbl)
+      )
+    )),
+    filters,
+    rows.length
+      ? table(["ID", "Name", "Email", "Dept", "Role", "Status", "Face", "Last Login", ""], rows)
+      : h("div", { class: "empty" }, "No users match the current filters."),
+    clientPager
+  ];
 }
 async function setActive(u) {
   try { await api(`/users/${u.id}/${u.is_active ? "deactivate" : "activate"}`, { method: "POST" }); notify(u.full_name + (u.is_active ? " deactivated." : " activated.")); }
@@ -208,8 +1575,7 @@ function addUser() {
     { name: "email", label: "Email", type: "email", required: true },
     { name: "full_name", label: "Full name", required: true },
     { name: "role", label: "Role", options: [["staff", "staff"], ["admin", "admin"], ["system", "system"]], value: "staff" },
-    { name: "username", label: "User name (optional)" },
-    { name: "employee_id", label: "Employee ID (optional)" },
+    { name: "username", label: "Username (optional)" },
     { name: "department_id", label: "Department", options: deptOptions("None") },
     { name: "password", label: "Password (blank: email a temporary one)", type: "password", minlength: 10 },
   ], "Create", async (v) => {
@@ -220,66 +1586,227 @@ function addUser() {
   });
 }
 
-// ---- Departments ----
+// ============================================================================
+// ---- Departments Tab ----
+// ============================================================================
 async function departmentsView() {
   await loadDepartments();
   return [
-    h("div", { class: "bar" }, h("span", { class: "grow" }), h("button", { type: "button", onclick: () => editDepartment() }, "Add department")),
-    table(["ID", "Code", "Name", ""], departments.map((d) => [String(d.id), d.code, d.name,
+    h("div", { class: "page-header" },
+      h("h2", {}, "Departments"),
+      h("button", { type: "button", onclick: () => editDepartment() }, "Add department")),
+    table(["Department Name", ""], departments.map((d) => [
+      d.name,
       h("span", { class: "nowrap" },
         h("button", { type: "button", class: "link", onclick: () => editDepartment(d) }, "Edit"),
-        h("button", { type: "button", class: "link danger", onclick: () => removeDepartment(d) }, "Delete"))])),
+        h("button", { type: "button", class: "link danger", onclick: () => removeDepartment(d) }, "Delete"))
+    ])),
   ];
 }
 function editDepartment(d) {
-  ask(d ? "Edit department" : "Add department", [
-    { name: "code", label: "Code", value: d && d.code, required: true },
-    { name: "name", label: "Name", value: d && d.name, required: true },
-  ], "Save", async (v) => {
-    await api(d ? "/departments/" + d.id : "/departments", { method: d ? "PUT" : "POST", body: { code: v.code.trim(), name: v.name.trim() } });
-    notify("Department saved."); render(true);
-  });
+  if (d) {
+    ask("Edit Department", [
+      { name: "name", label: "Department Name", value: d.name, required: true },
+    ], "Save", async (v) => {
+      await api("/departments/" + d.id, { method: "PUT", body: { name: v.name.trim() } });
+      notify("Department saved."); render(true);
+    });
+    return;
+  }
+
+  // Adding new department with Next / Save & Add Another support
+  const dlg = $("dlg"), form = $("dlgForm");
+  form.replaceChildren(
+    h("h2", {}, "Add Department"),
+    h("p", { class: "muted", style: "font-size:13px;margin:0 0 12px" }, "Enter department name. Click 'Next' to save and immediately add another."),
+    h("div", { class: "field" },
+      h("label", {}, "Department Name"),
+      h("input", { name: "name", type: "text", required: true, autocomplete: "off", placeholder: "e.g. Mechanical Engineering" })
+    ),
+    h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" },
+      h("button", { type: "submit", id: "btnSaveNext" }, "Save & Add Next \u2192"),
+      h("button", { type: "button", class: "secondary", onclick: async () => {
+        const inp = form.querySelector('input[name="name"]');
+        const val = inp ? inp.value.trim() : "";
+        if (!val) { $("dlgErr").textContent = "Department name is required."; return; }
+        try {
+          await api("/departments", { method: "POST", body: { name: val } });
+          notify(`Department "${val}" saved.`);
+          dlg.close();
+          render(true);
+        } catch (err) {
+          $("dlgErr").textContent = err.message;
+        }
+      }}, "Save & Close"),
+      h("button", { type: "button", class: "secondary", onclick: () => dlg.close() }, "Close")
+    ),
+    h("div", { id: "dlgErr", style: "color:var(--danger);font-size:12px;margin-top:8px" })
+  );
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const inp = form.querySelector('input[name="name"]');
+    const val = inp ? inp.value.trim() : "";
+    if (!val) { $("dlgErr").textContent = "Department name is required."; return; }
+    try {
+      await api("/departments", { method: "POST", body: { name: val } });
+      notify(`Department "${val}" saved! Enter next department:`);
+      inp.value = "";
+      inp.focus();
+      $("dlgErr").textContent = "";
+      await loadDepartments();
+      render(true);
+    } catch (err) {
+      $("dlgErr").textContent = err.message;
+    }
+  };
+
+  dlg.showModal();
+  setTimeout(() => { const inp = form.querySelector('input[name="name"]'); if (inp) inp.focus(); }, 60);
 }
 function removeDepartment(d) {
   ask("Delete department", [], "Delete", async () => { await api("/departments/" + d.id, { method: "DELETE" }); notify("Department deleted."); render(true); },
     "Delete " + d.name + "? This is blocked while users are assigned to it.");
 }
 
-// ---- Attendance ----
+// ============================================================================
+// ---- Attendance Logs Tab ----
+// ============================================================================
 const A = { mode: "daily", date_from: "", date_to: "", user_id: "", offset: 0 };
 async function attendance() {
   const limit = 50, events = A.mode === "events";
   const data = await api((events ? "/attendance/events?" : "/attendance/records?") + qs({ date_from: A.date_from, date_to: A.date_to, user_id: A.user_id, limit, offset: A.offset }));
-  const filters = h("form", { class: "bar", onsubmit: (e) => {
+
+  function calcTotalTime(r) {
+    if (r.total_time_formatted && r.total_time_formatted !== "-") return r.total_time_formatted;
+    if (r.first_check_in && r.last_check_out) {
+      const diff = Math.max(0, (new Date(r.last_check_out) - new Date(r.first_check_in)) / 1000);
+      return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+    }
+    if (r.first_check_in) {
+      const isToday = r.work_date === new Date().toLocaleDateString("en-CA");
+      if (isToday) {
+        const diff = Math.max(0, (Date.now() - new Date(r.first_check_in).getTime()) / 1000);
+        return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+      }
+    }
+    return "-";
+  }
+
+  const exportBtn = h("button", {
+    type: "button",
+    class: "secondary",
+    onclick: async () => {
+      try {
+        const exportUrl = (events ? "/attendance/events?" : "/attendance/records?") + qs({
+          date_from: A.date_from,
+          date_to: A.date_to,
+          user_id: A.user_id,
+          limit: 1000,
+          offset: 0
+        });
+        notify("Preparing CSV export...");
+        const expData = await api(exportUrl);
+        const items = expData.items || [];
+        if (!items.length) { notify("No records found to export."); return; }
+        let csvRows = [];
+        if (events) {
+          csvRows = [
+            ["Time", "User ID", "Name", "Event", "Face match"],
+            ...items.map((e) => [
+              fmt(e.occurred_at),
+              e.user_id,
+              e.full_name || "-",
+              e.event_type === "check_in" ? "Check in" : "Check out",
+              e.face_confidence == null ? "-" : e.face_confidence.toFixed(2)
+            ])
+          ];
+          downloadCSV(`Attendance_Events_${A.date_from || "start"}_to_${A.date_to || "today"}.csv`, csvRows);
+        } else {
+          csvRows = [
+            ["Date", "User ID", "Name", "First check-in", "Last check-out", "Total Time", "In / Out Scans"],
+            ...items.map((r) => [
+              r.work_date,
+              r.user_id,
+              r.full_name,
+              fmt(r.first_check_in),
+              fmt(r.last_check_out),
+              calcTotalTime(r),
+              `${r.check_in_count} / ${r.check_out_count}`
+            ])
+          ];
+          downloadCSV(`Attendance_Logs_${A.date_from || "start"}_to_${A.date_to || "today"}.csv`, csvRows);
+        }
+        notify("Export complete.");
+      } catch (err) {
+        notify("Export failed: " + err.message, true);
+      }
+    }
+  },
+    h("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", style: "vertical-align:text-bottom;margin-right:4px" },
+      h("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+      h("polyline", { points: "7 10 12 15 17 10" }),
+      h("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+    ),
+    "Export CSV"
+  );
+
+  const filters = h("form", { class: "toolbar", onsubmit: (e) => {
     e.preventDefault(); const f = new FormData(e.target);
     Object.assign(A, { mode: f.get("mode"), date_from: f.get("date_from"), date_to: f.get("date_to"), user_id: f.get("user_id").trim(), offset: 0 }); render();
   } },
-    h("label", {}, "View", h("select", { name: "mode" }, [["daily", "Daily summary"], ["events", "All events"]].map(([v, t]) => h("option", { value: v, selected: v === A.mode }, t)))),
-    h("label", {}, "From", h("input", { name: "date_from", type: "date", value: A.date_from })),
-    h("label", {}, "To", h("input", { name: "date_to", type: "date", value: A.date_to })),
-    h("label", {}, "User ID", h("input", { name: "user_id", type: "number", min: 1, value: A.user_id })),
-    h("button", { type: "submit" }, "Apply"));
+    h("div", { class: "field-group" }, h("label", {}, "View"), h("select", { name: "mode" }, [["daily", "Daily summary"], ["events", "All events"]].map(([v, t]) => h("option", { value: v, selected: v === A.mode }, t)))),
+    h("div", { class: "field-group" }, h("label", {}, "From"), h("input", { name: "date_from", type: "date", value: A.date_from })),
+    h("div", { class: "field-group" }, h("label", {}, "To"), h("input", { name: "date_to", type: "date", value: A.date_to })),
+    h("div", { class: "field-group" }, h("label", {}, "User ID"), h("input", { name: "user_id", type: "number", min: 1, value: A.user_id, style: "max-width:90px" })),
+    h("button", { type: "submit" }, "Apply"),
+    exportBtn
+  );
   const rows = events
-    ? data.items.map((e) => [fmt(e.occurred_at), String(e.user_id), e.full_name || "-", e.employee_id || "-", e.event_type === "check_in" ? "Check in" : "Check out", e.face_confidence == null ? "-" : e.face_confidence.toFixed(2)])
-    : data.items.map((r) => [r.work_date, String(r.user_id), r.full_name, r.employee_id || "-", fmt(r.first_check_in), fmt(r.last_check_out), r.check_in_count + " / " + r.check_out_count]);
-  const head = events ? ["Time", "User ID", "Name", "Employee ID", "Event", "Face match"] : ["Date", "User ID", "Name", "Employee ID", "First check in", "Last check out", "In / out"];
-  return [filters, h("p", { class: "muted" }, "Default range: this month. Times are shown in your local time zone."), table(head, rows), pager(A, data.total, limit, render)];
+    ? data.items.map((e) => [fmt(e.occurred_at), String(e.user_id), e.full_name || "-",
+        chip(e.event_type === "check_in" ? "Check in" : "Check out", e.event_type === "check_in" ? "green" : "red"),
+        e.face_confidence == null ? "-" : e.face_confidence.toFixed(2)])
+    : data.items.map((r) => [r.work_date, String(r.user_id), r.full_name, fmt(r.first_check_in), fmt(r.last_check_out), calcTotalTime(r), r.check_in_count + " / " + r.check_out_count]);
+  const head = events ? ["Time", "User ID", "Name", "Event", "Face match"] : ["Date", "User ID", "Name", "First check-in", "Last check-out", "Total Time", "In / out"];
+  return [
+    h("div", { class: "page-header" }, h("h2", {}, "Attendance Logs")),
+    filters,
+    h("p", { class: "muted", style: "font-size:12px;margin:0 0 12px" }, "Default range: this month. Times shown in your local time zone."),
+    table(head, rows),
+    pager(A, data.total, limit, render)
+  ];
 }
 
-// ---- Shell ----
-const TABS = { overview, users, departments: departmentsView, attendance };
+// ============================================================================
+// ---- Shell Router ----
+// ============================================================================
+const TABS = { overview, reports, users, departments: departmentsView, attendance };
 let timer = null, seq = 0;
 async function render(keepNote) {
-  const tab = TABS[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  const hash    = location.hash.slice(1);
+  const isDept  = hash.startsWith("dept-");
+  const isStaff = hash.startsWith("staff-");
+  // Sub-pages inherit their parent's nav highlight
+  const tab = isDept ? "overview" : isStaff ? "reports" : (TABS[hash] ? hash : "overview");
+
   document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
   if (keepNote !== true) notify("");
   const mine = ++seq;
   try {
-    const nodes = await TABS[tab]();
+    let nodes;
+    if (isDept) {
+      nodes = await deptDetail(decodeURIComponent(hash.slice(5)));      // strip "dept-"
+    } else if (isStaff) {
+      nodes = await staffHistoryPage(parseInt(hash.slice(6), 10));      // strip "staff-"
+    } else {
+      nodes = await TABS[tab]();
+    }
     if (mine === seq) $("view").replaceChildren(...nodes);
   } catch (e) { if (mine === seq) $("view").replaceChildren(h("p", { class: "msg err" }, e.message)); }
   clearInterval(timer);
-  if (tab === "overview") timer = setInterval(() => { if (!document.hidden && !$("dlg").open) render(true); }, 30000);
+  if (tab === "overview" || tab === "reports") {
+    timer = setInterval(() => { if (!document.hidden && !$("dlg").open && !$("dlgHistory").open) render(true); }, 30000);
+  }
 }
 window.addEventListener("hashchange", () => render());
 
@@ -287,6 +1814,7 @@ window.addEventListener("hashchange", () => render());
   try { me = await api("/users/me"); } catch { return; }
   if (me.role !== "admin") return logout();
   $("who").textContent = me.full_name;
+  $("avatarInitial").textContent = (me.full_name || "A").charAt(0).toUpperCase();
   render();
 })();
 </script>
