@@ -64,7 +64,9 @@ MAX_FACES_PER_FRAME = int(os.getenv("MAX_FACES_PER_FRAME", "5"))
 # ---------------------------------------------------------------------------
 # ResNet (facenet-pytorch InceptionResnetV1) recognizer
 # ---------------------------------------------------------------------------
-RECOGNITION_SCORE_THRESHOLD = float(os.getenv("RECOGNITION_SCORE_THRESHOLD", "0.55"))
+# 0.55 was too permissive: distinct identities can spuriously hit 0.5-0.6 cosine similarity on
+# single noisy/angled photos, causing false-positive "face already registered" enrollment conflicts.
+RECOGNITION_SCORE_THRESHOLD = float(os.getenv("RECOGNITION_SCORE_THRESHOLD", "0.65"))
 FACE_EMBEDDING_SIZE = 160
 
 # ---------------------------------------------------------------------------

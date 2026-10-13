@@ -88,3 +88,25 @@ class AttendanceEvent(Base):
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)  # UTC
     work_date: Mapped[date] = mapped_column(Date, index=True)  # local date in APP_TIMEZONE
     face_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class Holiday(Base):
+    """Admin-managed one-off holidays shown on the calendar (Sundays/Saturdays are handled separately)."""
+
+    __tablename__ = "holidays"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    date: Mapped[date] = mapped_column(Date, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AttendanceSettings(Base):
+    """Single-row table (id=1) of org-wide attendance rules."""
+
+    __tablename__ = "attendance_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    sunday_holiday: Mapped[bool] = mapped_column(Boolean, default=True)
+    saturday_holiday: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.core.config import get_settings
+from api.core.logs import audit
 from database.models import User, utcnow
 
 logger = logging.getLogger("api.face")
@@ -85,11 +86,13 @@ def delete_vectors(user_id: int) -> None:
     quadrant_service.delete_by_filter(emp_id=str(user_id), wait=True)
 
 
-async def register(user_id: int, images: list[str]) -> int:
+async def register(user_id: int, images: list[str], *, name: str = "", department: str = "") -> int:
     """Calls the inference service's register-staff-faces endpoint handler. Returns embeddings stored."""
     from inference.api import RegisterStaffFacesRequest, register_staff_faces
 
-    result = await register_staff_faces(RegisterStaffFacesRequest(emp_id=str(user_id), images=images))
+    result = await register_staff_faces(
+        RegisterStaffFacesRequest(emp_id=str(user_id), images=images, name=name, department=department)
+    )
     return int(result["embeddings_stored"])
 
 
@@ -104,6 +107,7 @@ def _validate(user: User, images: list[str]) -> list[str]:
 
     try:
         if vector_count(user.id) > 0:
+            logger.warning("Face enrollment conflict: user %s already has embeddings in the vector DB", user.id)
             raise HTTPException(status.HTTP_409_CONFLICT, "Face already enrolled for this account")
 
         usable, crops = [], []
@@ -118,8 +122,22 @@ def _validate(user: User, images: list[str]) -> list[str]:
                 f"Need at least {s.face_enroll_min_images} clear photos with exactly one face "
                 f"({len(usable)} usable). Retake in good lighting.",
             )
-        if any(identity not in ("Unknown", str(user.id)) for identity in identify_faces(crops)):
-            raise HTTPException(status.HTTP_409_CONFLICT, "This face is already registered to another account")
+
+        conflicts: dict[str, int] = {}
+        for identity in identify_faces(crops):
+            if identity not in ("Unknown", str(user.id)):
+                conflicts[identity] = conflicts.get(identity, 0) + 1
+        if conflicts:
+            other_id, hits = max(conflicts.items(), key=lambda kv: kv[1])
+            # A single hit is expected noise at this recognizer's threshold (near-threshold cosine
+            # similarity on one noisy/angled photo); only treat it as a real conflict if it repeats.
+            if hits > 1:
+                logger.warning(
+                    "Face enrollment conflict: user %s's photos matched existing identity %s in %d/%d photos",
+                    user.id, other_id, hits, len(usable),
+                )
+                audit("face_enroll_conflict", actor_id=user.id, conflicts_with=other_id, hits=hits, total=len(usable))
+                raise HTTPException(status.HTTP_409_CONFLICT, "This face is already registered to another account")
         return usable
     except _VECTOR_ERRORS:
         logger.exception("Vector DB error during enrollment validation")
@@ -140,7 +158,9 @@ async def enroll(db: Session, user: User, images: list[str]) -> int:
     if locked.face_enrolled:
         raise HTTPException(status.HTTP_409_CONFLICT, "Face already enrolled for this account")
     try:
-        stored = await register(user.id, usable)
+        stored = await register(
+            user.id, usable, name=user.full_name, department=user.department.name if user.department else ""
+        )
         if stored < get_settings().face_enroll_min_images:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Could not process enough photos. Please retry")
     except Exception as exc:

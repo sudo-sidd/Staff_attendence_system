@@ -18,6 +18,7 @@ import base64
 import json
 import logging
 import os
+import re
 import shutil
 import uuid
 from contextlib import asynccontextmanager
@@ -244,6 +245,13 @@ async def check_out(req: ImageActionRequest):
 class RegisterStaffFacesRequest(BaseModel):
     emp_id: str
     images: List[str]
+    name: str = ""
+    department: str = ""
+
+
+def _slug(value: str) -> str:
+    """Filesystem-safe folder component: alnum runs joined by single underscores."""
+    return re.sub(r"[^A-Za-z0-9]+", "_", value.strip()).strip("_") or "unknown"
 
 
 @app.post("/register-staff-faces/")
@@ -255,8 +263,11 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
     if not emp_id or not request.images:
         raise HTTPException(status_code=400, detail="Staff ID and images are required")
 
+    # Readable folder name for humans browsing media/; emp_id is always included so it stays unique.
+    folder_name = f"{_slug(request.name)}_{_slug(request.department)}_{emp_id}" if request.name or request.department else emp_id
+
     media_base = config.MEDIA_DIR
-    staff_images_dir = os.path.join(media_base, emp_id, "images")
+    staff_images_dir = os.path.join(media_base, folder_name, "images")
     profile_pics_dir = os.path.join(media_base, "profile_pics")
     os.makedirs(staff_images_dir, exist_ok=True)
     os.makedirs(profile_pics_dir, exist_ok=True)
@@ -284,7 +295,6 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
 
         img_path = os.path.join(staff_images_dir, f"image_{idx + 1}.jpg")
         cv2.imwrite(img_path, face_crop)
-        cv2.imwrite(os.path.join(media_base, emp_id, f"img_{idx + 1}.jpg"), face_crop)
         saved_count += 1
 
         if not profile_saved:
@@ -301,6 +311,11 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
     if saved_count == 0:
         raise HTTPException(status_code=400, detail="No valid face images could be processed. Please try capturing again.")
 
+    if embeddings_stored == 0:
+        # Photos were saved but every embedding insert failed (e.g. Qdrant down): don't report success.
+        logger.error("All %s embedding inserts failed for staff %s", saved_count, emp_id)
+        raise HTTPException(status_code=503, detail="Face database unavailable; could not store any embeddings")
+
     logger.info("Stored %s face photos and %s embeddings for staff %s", saved_count, embeddings_stored, emp_id)
     return {
         "status": "success",
@@ -308,6 +323,7 @@ async def register_staff_faces(request: RegisterStaffFacesRequest):
         "images_saved": saved_count,
         "embeddings_stored": embeddings_stored,
         "images_directory": staff_images_dir,
+        "folder_name": folder_name,
     }
 
 

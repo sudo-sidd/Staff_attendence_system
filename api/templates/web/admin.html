@@ -125,7 +125,39 @@
     overflow-y: auto;
     z-index: 90;
     transition: transform .25s ease;
+    display: flex;
+    flex-direction: column;
   }
+  #sidebar nav { flex: 1; }
+  .sidebar-footer {
+    border-top: 1px solid var(--border-light);
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+  .sidebar-footer .who-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .sidebar-footer .who-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar-footer a.btn-about {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    margin-bottom: 4px;
+    transition: background .15s;
+  }
+  .sidebar-footer a.btn-about:hover { background: rgba(32,33,36,.05); }
+  .sidebar-footer .btn-logout { width: 100%; }
   #sidebar nav a {
     display: flex;
     align-items: center;
@@ -338,6 +370,65 @@
   }
   .staff-row:hover {
     background: #f1f6fd !important;
+  }
+
+  /* ---- Calendar (Holidays) ---- */
+  .toolbar .spacer { flex: 1; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(60,64,67,.06);
+  }
+  .card .row { display: flex; }
+  .cal-wrap {
+    max-width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(60,64,67,.06);
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 2px 0;
+  }
+  .cal-cell {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    transition: background .12s;
+  }
+  .cal-cell:hover { background: #f1f6fd; }
+  .cal-empty { cursor: default; background: transparent; }
+  .cal-daynum { font-size: 13px; font-weight: 500; }
+  .cal-holiday { background: #fdeaea; }
+  .cal-holiday .cal-daynum { color: var(--danger); }
+  .cal-selected { outline: 2px solid var(--accent, #3b82f6); }
+  .cal-today .cal-daynum { text-decoration: underline; }
+  .cal-dot {
+    position: absolute;
+    bottom: 1px;
+    right: 3px;
+    color: var(--danger);
+    font-size: 14px;
+    line-height: 1;
   }
   .staff-cell {
     display: flex;
@@ -653,18 +744,8 @@
   </button>
   <a class="brand" href="#" style="display:flex; align-items:center; gap:8px;">
     <img src="/static/img/image.png" alt="Logo" style="width:24px; height:24px; object-fit:contain; border-radius:4px;">
-    Faculty Attendance
   </a>
   <div class="spacer"></div>
-  <div class="who">
-    <a href="/about" class="btn-about" title="About System & Team" style="text-decoration:none; color:var(--muted); font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:16px; border:1px solid var(--border); transition:all .15s; margin-right:4px;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      About
-    </a>
-    <div class="avatar" id="avatarInitial">A</div>
-    <span id="who"></span>
-    <button class="btn-logout" id="logout">Sign out</button>
-  </div>
 </header>
 
 <!-- Drawer Backdrop for Mobile -->
@@ -694,12 +775,24 @@
       Attendance Logs
     </a>
 
-    <div style="height:1px; background:var(--border-light); margin:8px 6px;"></div>
-    <!-- <a href="/about" id="nav-about">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      Our Story &amp; About
-    </a> -->
+    <a href="#calendar" data-tab="calendar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="1"/></svg>
+      Calendar
+    </a>
+
   </nav>
+
+  <div class="sidebar-footer">
+    <div class="who-row">
+      <div class="avatar" id="avatarInitial">A</div>
+      <span id="who"></span>
+    </div>
+    <a href="/about" class="btn-about" title="About System & Team">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      About
+    </a>
+    <button class="btn-logout" id="logout">Sign out</button>
+  </div>
 </aside>
 
 <!-- Main -->
@@ -776,17 +869,30 @@ const fmtTime = (s) => !s ? "-" : new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s
 const ago = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA");
 function notify(text, err) { const n = $("note"); n.textContent = text || ""; n.className = err ? "err" : ""; }
 
+// Loads the enrolled face photo into an avatar element, leaving the initial-letter fallback in place on 404/error.
+async function setAvatarPhoto(el, userId) {
+  try {
+    const res = await fetch(API + "/users/" + userId + "/photo", { headers: { Authorization: "Bearer " + token } });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    el.style.backgroundImage = `url(${url})`;
+    el.style.backgroundSize = "cover";
+    el.style.backgroundPosition = "center";
+    el.textContent = "";
+  } catch {}
+}
+
 function chip(text, type, extra) {
   return h("span", { class: "chip " + type }, extra ? [extra, text] : text);
 }
 
-function table(head, rows) {
+function table(head, rows, rowAttrs) {
   if (!rows.length) return h("div", { class: "empty" }, "No records found.");
   return h("div", { class: "table-wrap" },
     h("div", { class: "scroll" },
       h("table", {},
         h("thead", {}, h("tr", {}, head.map((t) => h("th", {}, t)))),
-        h("tbody", {}, rows.map((r) => h("tr", {}, r.map((c) => h("td", { class: typeof c === "string" && c.length < 30 ? "nowrap" : "" }, c))))))));
+        h("tbody", {}, rows.map((r, i) => h("tr", rowAttrs ? rowAttrs(i) : {}, r.map((c) => h("td", { class: typeof c === "string" && c.length < 30 ? "nowrap" : "" }, c))))))));
 }
 
 function pager(state, total, limit, reload) {
@@ -1020,6 +1126,138 @@ async function deptDetail(deptName) {
 }
 
 // ============================================================================
+// ---- Calendar Tab (Holiday management) ----
+// ============================================================================
+const CAL = { year: new Date().getFullYear(), month: new Date().getMonth(), selected: null };
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function fmtISODate(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function holidayFormFields(dateStr, nameVal) {
+  return [
+    { name: "date", label: "Date", type: "date", value: dateStr, required: true },
+    { name: "name", label: "Holiday name", value: nameVal || "", required: true },
+  ];
+}
+
+function addHoliday(dateStr) {
+  ask("Add holiday", holidayFormFields(dateStr), "Add",
+    async (v) => { await api("/holidays", { method: "POST", body: { date: v.date, name: v.name } }); notify("Holiday added."); render(true); });
+}
+
+function editHoliday(h2) {
+  ask("Edit holiday", holidayFormFields(h2.date, h2.name), "Save",
+    async (v) => { await api(`/holidays/${h2.id}`, { method: "PUT", body: { date: v.date, name: v.name } }); notify("Holiday updated."); render(true); });
+}
+
+function deleteHoliday(h2) {
+  ask("Delete holiday", [], "Delete",
+    async () => { await api(`/holidays/${h2.id}`, { method: "DELETE" }); notify("Holiday deleted."); render(true); },
+    `Remove "${h2.name}" on ${h2.date}?`);
+}
+
+async function calendar() {
+  const [allHolidays, settings] = await Promise.all([
+    api("/holidays?" + qs({ year: CAL.year })),
+    api("/holidays/settings"),
+  ]);
+  const byDate = new Map(allHolidays.map((h2) => [h2.date, h2]));
+
+  const first = new Date(Date.UTC(CAL.year, CAL.month, 1));
+  const startDow = first.getUTCDay(); // 0=Sun
+  const daysInMonth = new Date(Date.UTC(CAL.year, CAL.month + 1, 0)).getUTCDate();
+
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const todayStr = new Date().toLocaleDateString("en-CA");
+
+  const grid = h("div", { class: "cal-grid" },
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => h("div", { class: "cal-dow" }, d)),
+    cells.map((d) => {
+      if (d == null) return h("div", { class: "cal-cell cal-empty" });
+      const dow = new Date(Date.UTC(CAL.year, CAL.month, d)).getUTCDay();
+      const dateStr = fmtISODate(CAL.year, CAL.month, d);
+      const isWeeklyHoliday = (dow === 0 && settings.sunday_holiday) || (dow === 6 && settings.saturday_holiday);
+      const adhoc = byDate.get(dateStr);
+      const isHoliday = isWeeklyHoliday || !!adhoc;
+      const isSelected = CAL.selected === dateStr;
+      const isToday = dateStr === todayStr;
+      return h("div", {
+        class: "cal-cell" + (isHoliday ? " cal-holiday" : "") + (isSelected ? " cal-selected" : "") + (isToday ? " cal-today" : ""),
+        onclick: () => { CAL.selected = isSelected ? null : dateStr; render(); }
+      },
+        h("div", { class: "cal-daynum" }, String(d)),
+        isHoliday ? h("div", { class: "cal-dot" }, "•") : null
+      );
+    })
+  );
+
+  const nav = h("div", { style: "display:flex;align-items:center;justify-content:space-between" },
+    h("button", { type: "button", class: "secondary", style: "padding:4px 10px", onclick: () => {
+      CAL.month--; if (CAL.month < 0) { CAL.month = 11; CAL.year--; } CAL.selected = null; render();
+    } }, "←"),
+    h("h3", { style: "margin:0;font-size:14px" }, `${MONTH_NAMES[CAL.month]} ${CAL.year}`),
+    h("button", { type: "button", class: "secondary", style: "padding:4px 10px", onclick: () => {
+      CAL.month++; if (CAL.month > 11) { CAL.month = 0; CAL.year++; } CAL.selected = null; render();
+    } }, "→")
+  );
+
+  const toolbar = h("div", { class: "toolbar", style: "align-items:center" },
+    h("label", { style: "display:flex;align-items:center;gap:6px;cursor:pointer" },
+      h("input", { type: "checkbox", checked: settings.sunday_holiday, style: "width:auto",
+        onchange: async (e) => {
+          await api("/holidays/settings", { method: "PUT", body: { sunday_holiday: e.target.checked, saturday_holiday: settings.saturday_holiday } });
+          notify("Sunday holiday setting updated."); render(true);
+        } }),
+      "Sundays are holidays"
+    ),
+    h("label", { style: "display:flex;align-items:center;gap:6px;cursor:pointer" },
+      h("input", { type: "checkbox", checked: settings.saturday_holiday, style: "width:auto",
+        onchange: async (e) => {
+          await api("/holidays/settings", { method: "PUT", body: { sunday_holiday: settings.sunday_holiday, saturday_holiday: e.target.checked } });
+          notify("Saturday holiday setting updated."); render(true);
+        } }),
+      "Saturdays are holidays"
+    ),
+    h("div", { class: "spacer" }),
+    h("button", { type: "button", onclick: () => addHoliday(CAL.selected || todayStr) }, "Add holiday")
+  );
+
+  let detail;
+  if (CAL.selected) {
+    const dow = new Date(CAL.selected + "T00:00:00Z").getUTCDay();
+    const weekly = dow === 0 ? (settings.sunday_holiday ? "Sunday" : null) : (dow === 6 && settings.saturday_holiday ? "Saturday" : null);
+    const adhoc = byDate.get(CAL.selected);
+    const entries = [];
+    if (weekly) entries.push(h("div", { class: "chip gray" }, weekly + " (weekly holiday)"));
+    if (adhoc) {
+      entries.push(h("div", { class: "row", style: "align-items:center;gap:8px" },
+        h("span", {}, adhoc.name),
+        h("button", { type: "button", class: "link", onclick: () => editHoliday(adhoc) }, "Edit"),
+        h("button", { type: "button", class: "link danger", onclick: () => deleteHoliday(adhoc) }, "Delete")));
+    }
+    detail = h("div", { class: "card", style: "margin-top:16px" },
+      h("h3", { style: "margin:0 0 10px" }, CAL.selected),
+      entries.length ? entries : h("p", { class: "muted" }, "No holiday on this date."),
+      !adhoc ? h("button", { type: "button", class: "secondary", style: "margin-top:10px", onclick: () => addHoliday(CAL.selected) }, "Add holiday for this date") : null
+    );
+  } else {
+    detail = h("p", { class: "muted", style: "margin-top:12px" }, "Click a date to view or manage its holiday. Dates with a “•” already have a holiday.");
+  }
+
+  return [
+    h("div", { class: "page-header" }, h("h2", {}, "Calendar")),
+    toolbar,
+    h("div", { class: "cal-wrap" }, nav, grid),
+    detail
+  ];
+}
+
+// ============================================================================
 // ---- Reports Tab (Staff Daily Attendance & Total Today Time) ----
 // ============================================================================
 const R = { date: "", q: "", dept: "", status: "" };
@@ -1118,6 +1356,9 @@ async function reports() {
   );
 
   // Stat summary cards
+  const holidayBanner = rep.is_holiday
+    ? h("div", { class: "note", style: "margin:0 0 12px" }, `Holiday${rep.holiday_name ? " — " + rep.holiday_name : ""}: staff are not marked absent today.`)
+    : null;
   const stats = h("div", { class: "stats" },
     h("div", { class: "stat-card" }, h("div", { class: "num" }, String(rep.total_staff)), h("div", { class: "lbl" }, "Total Staff")),
     h("div", { class: "stat-card" }, h("div", { class: "num", style: "color:var(--success)" }, String(rep.present_count)), h("div", { class: "lbl" }, "Present Today")),
@@ -1130,7 +1371,9 @@ async function reports() {
   const head = ["ID", "Staff Name", "Email", "Department", "Check in", "Check out", "Total Today Time", "Status", "Action"];
   const rows = filtered.map((u) => {
     const initial = (u.full_name || "S").charAt(0).toUpperCase();
-    
+    const avatarEl = h("div", { class: "staff-avatar-sm" }, initial);
+    setAvatarPhoto(avatarEl, u.user_id);
+
     // Status chip
     let statusChip;
     if (u.status === "checked_in") {
@@ -1155,7 +1398,7 @@ async function reports() {
       h("td", { class: "muted nowrap", style: "font-weight:600" }, String(u.user_id)),
       h("td", {},
         h("div", { class: "staff-cell" },
-          h("div", { class: "staff-avatar-sm" }, initial),
+          avatarEl,
           h("div", {},
             h("div", { style: "font-weight:500;color:var(--text)" }, u.full_name)
           )
@@ -1200,6 +1443,7 @@ async function reports() {
       )
     ),
     stats,
+    holidayBanner,
     filters,
     tableWrap
   ];
@@ -1237,6 +1481,8 @@ async function staffHistoryPage(userId) {
   let daysRange = 30;
   let customFrom = "", customTo = "";
   const initial = (user.full_name || "S").charAt(0).toUpperCase();
+  const historyAvatarEl = h("div", { class: "history-avatar", style: "flex-shrink:0" }, initial);
+  setAvatarPhoto(historyAvatarEl, user.user_id);
 
   async function loadView() {
     let dateFrom, dateTo;
@@ -1358,7 +1604,7 @@ async function staffHistoryPage(userId) {
         h("button", { type: "button", class: "secondary", style: "padding:6px 12px;font-size:13px",
           onclick: () => { location.hash = backHash; } }, "← Back"),
         h("div", { style: "display:flex;align-items:center;gap:12px" },
-          h("div", { class: "history-avatar", style: "flex-shrink:0" }, initial),
+          historyAvatarEl,
           h("div", {},
             h("h2", {}, user.full_name),
             h("p", { class: "page-header-desc" },
@@ -1502,11 +1748,22 @@ async function users() {
       chip(u.face_enrolled ? "Yes" : "No", u.face_enrolled ? "green" : "red"),
       h("span", { class: "muted" }, fmt(u.last_login_at)),
       h("span", { class: "nowrap" },
-        h("button", { type: "button", class: "link", disabled: self, onclick: () => setActive(u) }, u.is_active ? "Deactivate" : "Activate"),
-        h("button", { type: "button", class: "link", onclick: () => setPassword(u) }, "Password"),
-        h("button", { type: "button", class: "link danger", disabled: self, onclick: () => removeUser(u) }, "Delete"))
+        h("button", { type: "button", class: "link", disabled: self, onclick: (e) => { e.stopPropagation(); setActive(u); } }, u.is_active ? "Deactivate" : "Activate"),
+        h("button", { type: "button", class: "link", onclick: (e) => { e.stopPropagation(); setPassword(u); } }, "Password"),
+        h("button", { type: "button", class: "link danger", disabled: self, onclick: (e) => { e.stopPropagation(); removeUser(u); } }, "Delete"))
     ];
   });
+
+  // System accounts (the kiosk) have no attendance history to view.
+  const rowAttrs = (i) => {
+    const u = pageItems[i];
+    if (u.role === "system") return {};
+    return {
+      class: "staff-row",
+      title: "View attendance history for " + u.full_name,
+      onclick: () => navToStaffHistory({ user_id: u.id, full_name: u.full_name, email: u.email, department: u.department?.name }, "#users")
+    };
+  };
 
   // Simple pager for client-side sliced data
   const from = total ? U.offset + 1 : 0;
@@ -1551,7 +1808,7 @@ async function users() {
     )),
     filters,
     rows.length
-      ? table(["ID", "Name", "Email", "Dept", "Role", "Status", "Face", "Last Login", ""], rows)
+      ? table(["ID", "Name", "Email", "Dept", "Role", "Status", "Face", "Last Login", ""], rows, rowAttrs)
       : h("div", { class: "empty" }, "No users match the current filters."),
     clientPager
   ];
@@ -1780,14 +2037,15 @@ async function attendance() {
 // ============================================================================
 // ---- Shell Router ----
 // ============================================================================
-const TABS = { overview, reports, users, departments: departmentsView, attendance };
+const TABS = { overview, reports, users, departments: departmentsView, attendance, calendar };
 let timer = null, seq = 0;
 async function render(keepNote) {
   const hash    = location.hash.slice(1);
   const isDept  = hash.startsWith("dept-");
   const isStaff = hash.startsWith("staff-");
-  // Sub-pages inherit their parent's nav highlight
-  const tab = isDept ? "overview" : isStaff ? "reports" : (TABS[hash] ? hash : "overview");
+  // Sub-pages inherit their parent's nav highlight (whichever page was navigated from)
+  const staffBackTab = isStaff ? (staffCache[hash.slice(6)]?._backHash || "#reports").slice(1) : null;
+  const tab = isDept ? "overview" : isStaff ? staffBackTab : (TABS[hash] ? hash : "overview");
 
   document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === tab));
   if (keepNote !== true) notify("");
@@ -1815,6 +2073,7 @@ window.addEventListener("hashchange", () => render());
   if (me.role !== "admin") return logout();
   $("who").textContent = me.full_name;
   $("avatarInitial").textContent = (me.full_name || "A").charAt(0).toUpperCase();
+  setAvatarPhoto($("avatarInitial"), me.id);
   render();
 })();
 </script>

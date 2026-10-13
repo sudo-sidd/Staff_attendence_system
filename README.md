@@ -104,7 +104,7 @@ Every request gets an `X-Request-ID` (an incoming one is reused if it is 1-64 ch
 
 | `.env` | Default | Holds |
 |---|---|---|
-| `MEDIA_HOST_DIR` | `./media` | enrolled face images: `<employee id>/images/image_N.jpg`, `<employee id>/img_N.jpg`, `profile_pics/<employee id>.jpg` |
+| `MEDIA_HOST_DIR` | `./media` | enrolled face images: `<name>_<department>_<user id>/images/image_N.jpg`, `profile_pics/<user id>.jpg` |
 | `LOG_HOST_DIR` | `./logs` | `app.log`, `error.log`, `access.log`, `audit.log` (+ rotated `.1`, `.2` ...) |
 | `MYSQL_DATA_DIR`, `QDRANT_DATA_DIR`, `REDIS_DATA_DIR` | `./mysql_data`, `./qdrant_data`, `./redis_data` | database files |
 

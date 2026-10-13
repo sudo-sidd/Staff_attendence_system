@@ -201,7 +201,7 @@ All settings are environment-driven (see `.env.example`); the most relevant:
 | `DETECTION_CONF_THRESHOLD` | `0.5` | YOLO confidence cutoff. |
 | `DETECTION_IMG_SIZE` | `640` | YOLO inference resolution. |
 | `MAX_FACES_PER_FRAME` | `5` | Cap on faces processed per frame (bounds recognition cost). |
-| `RECOGNITION_SCORE_THRESHOLD` | `0.55` | Minimum cosine similarity to accept a Qdrant match as a known identity. |
+| `RECOGNITION_SCORE_THRESHOLD` | `0.65` | Minimum cosine similarity to accept a Qdrant match as a known identity. |
 | `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION` | — | Qdrant connection. |
 | `REDIS_URL`, `REDIS_EVENTS_CHANNEL` | — | Redis connection + pub/sub channel name. |
 | `RECOGNITION_CACHE_TTL` | `5`s | How long a connection suppresses repeat `face_recognized` broadcasts for the same identity. |

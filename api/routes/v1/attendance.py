@@ -20,7 +20,8 @@ from api.routes.models.attendance import (
     StaffDailyReportItem,
 )
 from api.services import attendance as svc
-from database.models import AttendanceEvent, AttendanceType, Role, User, utcnow
+from api.services import holidays as holiday_svc
+from database.models import AttendanceEvent, AttendanceType, Holiday, Role, User, utcnow
 from database.session import get_db
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -244,6 +245,11 @@ def daily_staff_report(
         )
 
     absent_count = len(staff_users) - present_count
+    holiday_row = db.scalar(select(Holiday).where(Holiday.date == day))
+    is_holiday = holiday_row is not None or holiday_svc.is_weekly_holiday(db, day)
+    if is_holiday:
+        absent_count = 0
+    weekly_name = "Sunday" if day.weekday() == 6 else "Saturday" if day.weekday() == 5 else None
     return StaffDailyReport(
         work_date=day,
         items=items,
@@ -251,4 +257,6 @@ def daily_staff_report(
         present_count=present_count,
         currently_in_count=currently_in_count,
         absent_count=absent_count,
+        is_holiday=is_holiday,
+        holiday_name=holiday_row.name if holiday_row else (weekly_name if is_holiday else None),
     )

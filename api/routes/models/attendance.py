@@ -108,3 +108,5 @@ class StaffDailyReport(BaseModel):
     present_count: int
     currently_in_count: int
     absent_count: int
+    is_holiday: bool = False
+    holiday_name: str | None = None

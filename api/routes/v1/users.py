@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from fastapi.responses import FileResponse
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -94,6 +95,21 @@ def me(user: CurrentUser) -> User:
 def get_user(user_id: int, user: CurrentUser, db: DB) -> User:
     _self_or(Permission.users_read_any, user, user_id)
     return get_user_or_404(db, user_id)
+
+
+@router.get("/{user_id}/photo")
+def get_user_photo(user_id: int, user: CurrentUser, db: DB) -> FileResponse:
+    """The enrolled face profile picture saved during face registration, if any."""
+    import os
+
+    from inference import config
+
+    _self_or(Permission.users_read_any, user, user_id)
+    get_user_or_404(db, user_id)
+    path = os.path.join(config.MEDIA_DIR, "profile_pics", f"{user_id}.jpg")
+    if not os.path.isfile(path):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No profile photo")
+    return FileResponse(path, media_type="image/jpeg")
 
 
 def _set_active(user_id: int, active: bool, actor: User, db: Session) -> User:

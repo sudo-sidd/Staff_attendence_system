@@ -24,6 +24,7 @@ class Permission(str, Enum):
     users_manage = "users:manage"  # activate / deactivate / delete
     users_set_password_any = "users:set_password_any"
     departments_manage = "departments:manage"
+    holidays_manage = "holidays:manage"
     attendance_mark_self = "attendance:mark_self"  # check in / out as yourself
     attendance_read_any = "attendance:read_any"  # all users' records and raw events
     admin_summary = "admin:summary"  # dashboard counters

@@ -156,7 +156,7 @@ def inference(monkeypatch):
     monkeypatch.setattr(face_svc, "identify_faces", lambda crops: [state["identity"]] * len(crops))
     monkeypatch.setattr(face_svc, "delete_vectors", lambda uid: state["deleted"].append(uid))
 
-    async def register(uid, images):
+    async def register(uid, images, **_kwargs):
         state["registered"].append((uid, len(images)))
         return state["stored"]
 
